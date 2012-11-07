@@ -1,0 +1,13 @@
+--- ./libdwfl/linux-kernel-modules.c.orig	2010-02-10 12:12:03.000000000 +0100
++++ ./libdwfl/linux-kernel-modules.c	2010-02-10 12:14:58.000000000 +0100
+@@ -577,8 +577,8 @@
+ int
+ dwfl_linux_kernel_report_kernel (Dwfl *dwfl)
+ {
+-  Dwarf_Addr start;
+-  Dwarf_Addr end;
++  Dwarf_Addr start = 0;
++  Dwarf_Addr end = 0;
+   inline Dwfl_Module *report (void)
+     {
+       return INTUSE(dwfl_report_module) (dwfl, KERNEL_MODNAME, start, end);

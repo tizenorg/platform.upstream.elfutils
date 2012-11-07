@@ -1,0 +1,15 @@
+From: unknown
+Upstream: no
+Subject: do not build po and tests components
+
+--- elfutils/Makefile.am-dist	2007-07-04 12:05:20.000000000 +0200
++++ elfutils/Makefile.am	2007-07-04 12:05:25.000000000 +0200
+@@ -29,7 +29,7 @@
+ 
+ # Add doc back when we have some real content.
+ SUBDIRS = config m4 lib libelf libebl libdwfl libdw libcpu libasm backends \
+-	  src po tests
++	  src
+ 
+ EXTRA_DIST = elfutils.spec GPG-KEY NOTES EXCEPTION
+ 
