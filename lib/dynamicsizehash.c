@@ -44,10 +44,7 @@
 
 
 static size_t
-lookup (htab, hval, val)
-     NAME *htab;
-     HASHTYPE hval;
-     TYPE val __attribute__ ((unused));
+lookup (NAME *htab, HASHTYPE hval, TYPE val __attribute__((unused)))
 {
   /* First hash function: simply take the modul but prevent zero.  Small values
      can skip the division, which helps performance when this is common.  */
