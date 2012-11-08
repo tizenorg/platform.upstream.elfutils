@@ -6,16 +6,7 @@ Summary:        Higher-level library to access ELF
 Url:            http://elfutils.fedorahosted.org
 Group:          System/Libraries
 Source:         elfutils-%{version}.tar.bz2
-Source1:        README-BEFORE-ADDING-PATCHES
 Source2:        baselibs.conf
-Patch1:         elfutils-portability.patch
-Patch2:         elfutils-robustify.patch
-Patch3:         elfutils-no-po-test-build.diff
-Patch4:         libebl-prototype-fix.diff
-Patch5:         elfutils-uninitialized.diff
-Patch6:         elfutils-0.137-dwarf-header-check-fix.diff
-Patch7:         elfutils-0.148-dont-crash.diff
-Patch8:         elfutils-revert-portability-scanf.patch
 BuildRequires:  automake
 BuildRequires:  bison
 BuildRequires:  bzip2-devel
@@ -124,14 +115,6 @@ to develop applications that require these.
 
 %prep
 %setup -q -n elfutils-%{version}
-%patch1 -p1
-%patch2 -p1
-%patch3 -p1
-%patch4 -p1
-%patch5 -p1
-%patch6 -p1
-%patch7 -p1
-%patch8 -p1 -R
 
 %build
 modified="$(sed -n '/^----/n;s/ - .*$//;p;q' "%{_sourcedir}/%{name}.changes")"
@@ -145,7 +128,6 @@ make %{?_smp_mflags}
 %install
 %make_install
 # remove unneeded files
-rm -f %{buildroot}%{_libdir}/*.la
 ls -lR %{buildroot}%{_libdir}/libelf*
 
 %post -n libebl -p /sbin/ldconfig
