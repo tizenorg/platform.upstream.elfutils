@@ -1,3 +1,4 @@
+%define keepstatic 1
 Name:           elfutils
 Version:        0.153
 Release:        0
