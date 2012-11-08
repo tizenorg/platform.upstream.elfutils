@@ -296,8 +296,10 @@ dwarf_getsrclines (Dwarf_Die *cudie, Dwarf_Lines **lines, size_t *nlines)
       /* Consistency check.  */
       if (unlikely (linep != header_start + header_length))
 	{
+#if 0
 	  __libdw_seterrno (DWARF_E_INVALID_DWARF);
 	  goto out;
+#endif
 	}
 
         /* We are about to process the statement program.  Initialize the
