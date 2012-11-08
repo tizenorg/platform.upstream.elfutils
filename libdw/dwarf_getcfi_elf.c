@@ -76,7 +76,7 @@ parse_eh_frame_hdr (const uint8_t *hdr, size_t hdr_size, GElf_Addr hdr_vaddr,
 {
   const uint8_t *h = hdr;
 
-  if (*h++ != 1)		/* version */
+  if (!h || *h++ != 1)		/* version */
     return (void *) -1l;
 
   uint8_t eh_frame_ptr_encoding = *h++;
