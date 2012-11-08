@@ -1,5 +1,5 @@
 /* Update symbol information in symbol table at the given index.
-   Copyright (C) 2000, 2001, 2002 Red Hat, Inc.
+   Copyright (C) 2000-2009 Red Hat, Inc.
    This file is part of Red Hat elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2000.
 
@@ -72,12 +72,6 @@ gelf_update_sym (data, ndx, src)
   if (data == NULL)
     return 0;
 
-  if (unlikely (ndx < 0))
-    {
-      __libelf_seterrno (ELF_E_INVALID_INDEX);
-      return 0;
-    }
-
   if (unlikely (data_scn->d.d_type != ELF_T_SYM))
     {
       /* The type of the data better should match.  */
@@ -102,7 +96,7 @@ gelf_update_sym (data, ndx, src)
 	}
 
       /* Check whether we have to resize the data buffer.  */
-      if (unlikely ((ndx + 1) * sizeof (Elf32_Sym) > data_scn->d.d_size))
+      if (INVALID_NDX (ndx, Elf32_Sym, &data_scn->d))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
 	  goto out;
@@ -125,7 +119,7 @@ gelf_update_sym (data, ndx, src)
   else
     {
       /* Check whether we have to resize the data buffer.  */
-      if (unlikely ((ndx + 1) * sizeof (Elf64_Sym) > data_scn->d.d_size))
+      if (INVALID_NDX (ndx, Elf64_Sym, &data_scn->d))
 	{
 	  __libelf_seterrno (ELF_E_INVALID_INDEX);
 	  goto out;
