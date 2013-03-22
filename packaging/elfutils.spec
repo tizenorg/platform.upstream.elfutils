@@ -5,7 +5,7 @@ Release:        0
 License:        GPL-2.0-with-osi-exception
 Summary:        Higher-level library to access ELF
 Url:            http://elfutils.fedorahosted.org
-Group:          System/Libraries
+Group:          Base/Tools
 Source:         elfutils-%{version}.tar.bz2
 Source2:        baselibs.conf
 BuildRequires:  automake
@@ -14,7 +14,6 @@ BuildRequires:  bzip2-devel
 BuildRequires:  flex
 BuildRequires:  xz-devel
 BuildRequires:  zlib-devel
-BuildRoot:      %{_tmppath}/%{name}-%{version}-build
 
 %description
 This package provides a higher-level library to access ELF files. This
@@ -22,7 +21,7 @@ is a part of elfutils package.
 
 %package -n libasm
 Summary:        A collection of utilities and DSOs to handle compiled objects
-Group:          Development/Tools/Other
+Group:          Base/Libraries
 
 %description -n libasm
 Elfutils is a collection of utilities, including ld (a linker), nm (for
@@ -35,8 +34,8 @@ which implement DWARF, ELF, and machine-specific ELF handling.
 %package -n libasm-devel
 License:        GPL-2.0-with-osi-exception
 Summary:        A collection of utilities and DSOs to handle compiled objects
-Group:          Development/Tools/Other
-Requires:       glibc-devel,
+Group:          Development/Libraries
+Requires:       glibc-devel
 Requires:       libasm = %{version}
 
 %description -n libasm-devel
@@ -50,9 +49,7 @@ which implement DWARF, ELF, and machine-specific ELF handling.
 %package -n libebl
 License:        GPL-2.0-with-osi-exception
 Summary:        A collection of utilities and DSOs to handle compiled objects
-Group:          Development/Tools/Other
-Provides:       libebl = %{version}
-Obsoletes:      libebl < %{version}
+Group:          Base/Libraries
 
 %description -n libebl
 Elfutils is a collection of utilities, including ld (a linker), nm (for
@@ -65,8 +62,8 @@ which implement DWARF, ELF, and machine-specific ELF handling.
 %package -n libebl-devel
 License:        GPL-2.0-with-osi-exception
 Summary:        Include Files and Libraries mandatory for Development
-Group:          Development/Libraries/C and C++
-Requires:       glibc-devel,
+Group:          Development/Libraries
+Requires:       glibc-devel
 Requires:       libdw-devel = %{version}
 Requires:       libebl = %{version}
 
@@ -77,6 +74,7 @@ to develop applications that require these.
 %package -n libelf
 License:        GPL-2.0-with-osi-exception
 Summary:        Library to read and write ELF files
+Group:          Base/Libraries
 
 %description -n libelf
 This package provides a high-level library to read and write ELF files.
@@ -85,8 +83,8 @@ This is a part of elfutils package.
 %package -n libelf-devel
 License:        GPL-2.0-with-osi-exception
 Summary:        Include Files and Libraries mandatory for Development
-Group:          Development/Libraries/C and C++
-Requires:       glibc-devel,
+Group:          Development/Libraries
+Requires:       glibc-devel
 Requires:       libelf = %{version}
 Conflicts:      libelf0-devel
 
@@ -97,6 +95,7 @@ to develop applications that require these.
 %package -n libdw
 License:        GPL-2.0-with-osi-exception
 Summary:        Library to access DWARF debugging information
+Group:          Base/Libraries
 
 %description -n libdw
 This package provides a high-level library to access the DWARF debugging
@@ -105,8 +104,8 @@ information.  This is a part of elfutils package.
 %package -n libdw-devel
 License:        GPL-2.0-with-osi-exception
 Summary:        Include Files and Libraries mandatory for Development
-Group:          Development/Libraries/C and C++
-Requires:       glibc-devel,
+Group:          Development/Libraries
+Requires:       glibc-devel
 Requires:       libdw = %{version}
 Requires:       libelf-devel = %{version}
 
@@ -149,6 +148,7 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 
 %files -n libasm
 %defattr(-,root,root)
+%license COPYING
 %{_libdir}/libasm.so.*
 %{_libdir}/libasm-%{version}.so
 
@@ -161,6 +161,7 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 
 %files -n libebl
 %defattr(-,root,root)
+%license COPYING
 %{_libdir}/elfutils
 
 %files -n libebl-devel
@@ -171,6 +172,7 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 
 %files -n libelf
 %defattr(-,root,root)
+%license COPYING
 %{_libdir}/libelf.so.*
 %{_libdir}/libelf-%{version}.so
 
@@ -188,6 +190,7 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 
 %files -n libdw
 %defattr(-,root,root)
+%license COPYING
 %{_libdir}/libdw.so.*
 %{_libdir}/libdw-%{version}.so
 
