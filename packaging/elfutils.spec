@@ -8,6 +8,7 @@ Url:            http://elfutils.fedorahosted.org
 Group:          Base/Tools
 Source:         elfutils-%{version}.tar.bz2
 Source2:        baselibs.conf
+Source1001: 	elfutils.manifest
 BuildRequires:  automake
 BuildRequires:  bison
 BuildRequires:  bzip2-devel
@@ -115,6 +116,7 @@ to develop applications that require these.
 
 %prep
 %setup -q -n elfutils-%{version}
+cp %{SOURCE1001} .
 
 %build
 #modified="$(sed -n '/^----/n;s/ - .*$//;p;q' "%{_sourcedir}/%{name}.changes")"
@@ -143,16 +145,19 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 %postun -n libdw -p /sbin/ldconfig
 
 %files
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %{_bindir}/*
 
 %files -n libasm
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %license COPYING
 %{_libdir}/libasm.so.*
 %{_libdir}/libasm-%{version}.so
 
 %files -n libasm-devel
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %{_libdir}/libasm.so
 %{_libdir}/libasm.a
@@ -160,23 +165,27 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 %{_includedir}/elfutils/libasm.h
 
 %files -n libebl
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %license COPYING
 %{_libdir}/elfutils
 
 %files -n libebl-devel
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %{_libdir}/libebl.a
 %dir %{_includedir}/elfutils
 %{_includedir}/elfutils/libebl.h
 
 %files -n libelf
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %license COPYING
 %{_libdir}/libelf.so.*
 %{_libdir}/libelf-%{version}.so
 
 %files -n libelf-devel
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %{_libdir}/libelf.so
 %{_libdir}/libelf.a
@@ -189,12 +198,14 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 %{_includedir}/elfutils/version.h
 
 %files -n libdw
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %license COPYING
 %{_libdir}/libdw.so.*
 %{_libdir}/libdw-%{version}.so
 
 %files -n libdw-devel
+%manifest %{name}.manifest
 %defattr(-,root,root)
 %{_libdir}/libdw.a
 %{_libdir}/libdw.so
