@@ -6,6 +6,9 @@
 /* Defined if libdw should support GNU ref_alt FORM, dwz multi files. */
 #undef ENABLE_DWZ
 
+/* Have __builtin_popcount. */
+#undef HAVE_BUILTIN_POPCOUNT
+
 /* $libdir subdirectory containing libebl modules. */
 #undef LIBEBL_SUBDIR
 
@@ -63,5 +66,8 @@
 
 /* Define for large files, on AIX-style hosts. */
 #undef _LARGE_FILES
+
+/* Stubbed out if missing compiler support. */
+#undef __thread
 
 #include <eu-config.h>

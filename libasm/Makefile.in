@@ -39,10 +39,11 @@ host_triplet = @host@
 DIST_COMMON = $(noinst_HEADERS) $(pkginclude_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(top_srcdir)/config/eu.am ChangeLog
-@MUDFLAP_TRUE@am__append_1 = -fmudflap
+@BUILD_WERROR_TRUE@am__append_1 = $(if $($(*F)_no_Werror),,-Werror)
+@MUDFLAP_TRUE@am__append_2 = -fmudflap
 @MUDFLAP_FALSE@noinst_PROGRAMS = $(am__EXEEXT_1)
 @MUDFLAP_TRUE@am_libasm_pic_a_OBJECTS =
-@MUDFLAP_FALSE@@USE_LOCKS_TRUE@am__append_2 = -lpthread
+@MUDFLAP_FALSE@@USE_LOCKS_TRUE@am__append_3 = -lpthread
 subdir = libasm
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/nls.m4 $(top_srcdir)/m4/po.m4 \
@@ -153,6 +154,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LD_AS_NEEDED = @LD_AS_NEEDED@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
@@ -182,6 +184,7 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 USE_NLS = @USE_NLS@
 VERSION = 1
+WEXTRA = @WEXTRA@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
@@ -244,10 +247,9 @@ INCLUDES = -I. -I$(srcdir) -I$(top_srcdir)/lib -I.. \
 	-I$(top_srcdir)/libelf -I$(top_srcdir)/libebl \
 	-I$(top_srcdir)/libdw
 AM_CFLAGS = -std=gnu99 -Wall -Wshadow $(if \
-	$($(*F)_no_Werror),,-Werror) $(if \
-	$($(*F)_no_Wunused),,-Wunused -Wextra) $(if \
+	$($(*F)_no_Wunused),,-Wunused $(WEXTRA)) $(if \
 	$($(*F)_no_Wformat),-Wno-format,-Wformat=2) $($(*F)_CFLAGS) \
-	$(am__append_1)
+	$(am__append_1) $(am__append_2)
 @MUDFLAP_FALSE@libmudflap = 
 @MUDFLAP_TRUE@libmudflap = -lmudflap
 COMPILE.os = $(filter-out -fprofile-arcs -ftest-coverage $(no_mudflap.os),\
@@ -276,7 +278,7 @@ libasm_a_SOURCES = asm_begin.c asm_abort.c asm_end.c asm_error.c \
 
 @MUDFLAP_FALSE@libasm_pic_a_SOURCES = 
 @MUDFLAP_FALSE@am_libasm_pic_a_OBJECTS = $(libasm_a_SOURCES:.c=.os)
-@MUDFLAP_FALSE@libasm_so_LDLIBS = $(am__append_2)
+@MUDFLAP_FALSE@libasm_so_LDLIBS = $(am__append_3)
 @MUDFLAP_FALSE@libasm_so_SOURCES = 
 noinst_HEADERS = libasmP.h symbolhash.h
 EXTRA_DIST = libasm.map

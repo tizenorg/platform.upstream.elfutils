@@ -35,14 +35,15 @@ build_triplet = @build@
 host_triplet = @host@
 DIST_COMMON = $(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(top_srcdir)/config/eu.am ChangeLog
-@MUDFLAP_TRUE@am__append_1 = -fmudflap
-@STANDALONE_FALSE@am__append_2 = -I$(top_srcdir)/libasm -I$(top_srcdir)/libdw \
+@BUILD_WERROR_TRUE@am__append_1 = $(if $($(*F)_no_Werror),,-Werror)
+@MUDFLAP_TRUE@am__append_2 = -fmudflap
+@STANDALONE_FALSE@am__append_3 = -I$(top_srcdir)/libasm -I$(top_srcdir)/libdw \
 @STANDALONE_FALSE@	    -I$(top_srcdir)/libdwfl \
 @STANDALONE_FALSE@	    -I$(top_srcdir)/libebl -I$(top_srcdir)/libelf \
 @STANDALONE_FALSE@	    -I$(top_srcdir)/lib -I..
 
-@STANDALONE_FALSE@am__append_3 = -Wl,-rpath-link,../libasm:../libdw:../libelf
-@TESTS_RPATH_TRUE@am__append_4 = -Wl,-rpath,$(BUILD_RPATH)
+@STANDALONE_FALSE@am__append_4 = -Wl,-rpath-link,../libasm:../libdw:../libelf
+@TESTS_RPATH_TRUE@am__append_5 = -Wl,-rpath,$(BUILD_RPATH)
 check_PROGRAMS = arextract$(EXEEXT) arsymtest$(EXEEXT) \
 	newfile$(EXEEXT) saridx$(EXEEXT) scnnames$(EXEEXT) \
 	sectiondump$(EXEEXT) showptable$(EXEEXT) update1$(EXEEXT) \
@@ -92,12 +93,12 @@ TESTS = run-arextract.sh run-arsymtest.sh newfile$(EXEEXT) \
 	run-readelf-gdb_index.sh run-unstrip-n.sh run-low_high_pc.sh \
 	run-macro-test.sh run-elf_cntl_gelf_getshdr.sh \
 	run-test-archive64.sh $(am__EXEEXT_1) $(am__EXEEXT_3) \
-	$(am__append_9)
-@STANDALONE_FALSE@am__append_5 = msg_tst md5-sha1-test
+	$(am__append_10)
 @STANDALONE_FALSE@am__append_6 = msg_tst md5-sha1-test
-@HAVE_LIBASM_TRUE@am__append_7 = $(asm_TESTS)
+@STANDALONE_FALSE@am__append_7 = msg_tst md5-sha1-test
 @HAVE_LIBASM_TRUE@am__append_8 = $(asm_TESTS)
-@ENABLE_DWZ_TRUE@am__append_9 = run-readelf-dwz-multi.sh
+@HAVE_LIBASM_TRUE@am__append_9 = $(asm_TESTS)
+@ENABLE_DWZ_TRUE@am__append_10 = run-readelf-dwz-multi.sh
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/nls.m4 $(top_srcdir)/m4/po.m4 \
@@ -412,6 +413,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LD_AS_NEEDED = @LD_AS_NEEDED@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
@@ -441,6 +443,7 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 USE_NLS = @USE_NLS@
 VERSION = @VERSION@
+WEXTRA = @WEXTRA@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
@@ -499,12 +502,11 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 zip_LIBS = @zip_LIBS@
-INCLUDES = -I. -I$(srcdir) -I$(top_srcdir)/lib -I.. $(am__append_2)
+INCLUDES = -I. -I$(srcdir) -I$(top_srcdir)/lib -I.. $(am__append_3)
 AM_CFLAGS = -std=gnu99 -Wall -Wshadow $(if \
-	$($(*F)_no_Werror),,-Werror) $(if \
-	$($(*F)_no_Wunused),,-Wunused -Wextra) $(if \
+	$($(*F)_no_Wunused),,-Wunused $(WEXTRA)) $(if \
 	$($(*F)_no_Wformat),-Wno-format,-Wformat=2) $($(*F)_CFLAGS) \
-	$(am__append_1)
+	$(am__append_1) $(am__append_2)
 @MUDFLAP_FALSE@libmudflap = 
 @MUDFLAP_TRUE@libmudflap = -lmudflap
 COMPILE.os = $(filter-out -fprofile-arcs -ftest-coverage $(no_mudflap.os),\
@@ -514,7 +516,7 @@ CLEANFILES = *.gcno *.gcda
 textrel_check = if readelf -d $@ | fgrep -q TEXTREL; then exit 1; fi
 @MUDFLAP_FALSE@BUILD_RPATH = \$$ORIGIN/../libasm:\$$ORIGIN/../libdw:\$$ORIGIN/../backends:\$$ORIGIN/../libelf
 @MUDFLAP_TRUE@BUILD_RPATH = \$$ORIGIN/../backends
-AM_LDFLAGS = $(am__append_3) $(am__append_4)
+AM_LDFLAGS = $(am__append_4) $(am__append_5)
 @TESTS_RPATH_FALSE@tests_rpath = no
 @TESTS_RPATH_TRUE@tests_rpath = yes
 asm_TESTS = asm-tst1 asm-tst2 asm-tst3 asm-tst4 asm-tst5 \

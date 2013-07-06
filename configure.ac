@@ -90,6 +90,54 @@ CFLAGS="$old_CFLAGS"])
 AS_IF([test "x$ac_cv_c99" != xyes],
       AC_MSG_ERROR([gcc with C99 support required]))
 
+AC_CACHE_CHECK([for -Wextra option to $CC], ac_cv_cc_wextra, [dnl
+old_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -Wextra"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([void foo (void) { }])],
+		  ac_cv_cc_wextra=yes, ac_cv_cc_wextra=no)
+CFLAGS="$old_CFLAGS"])
+AC_SUBST(WEXTRA)
+AS_IF([test "x$ac_cv_cc_wextra" = xyes], [WEXTRA=-Wextra], [WEXTRA=-W])
+
+AC_CACHE_CHECK([for -fgnu89-inline option to $CC], ac_cv_cc_gnu89_inline, [dnl
+old_CFLAGS="$CFLAGS"
+CFLAGS="$CFLAGS -fgnu89-inline -Werror"
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([
+void foo (void)
+{
+  inline void bar (void) {}
+  bar ();
+}
+extern inline void baz (void) {}
+])], ac_cv_cc_gnu89_inline=yes, ac_cv_cc_gnu89_inline=no)
+CFLAGS="$old_CFLAGS"])
+AS_IF([test "x$ac_cv_cc_gnu89_inline" = xyes],
+      [WEXTRA="${WEXTRA:+$WEXTRA }-fgnu89-inline"])
+
+AC_CACHE_CHECK([for --as-needed linker option],
+	       ac_cv_as_needed, [dnl
+cat > conftest.c <<EOF
+int main (void) { return 0; }
+EOF
+if AC_TRY_COMMAND([${CC-cc} $CFLAGS $CPPFLAGS $LDFLAGS
+			    -fPIC -shared -o conftest.so conftest.c
+			    -Wl,--as-needed 1>&AS_MESSAGE_LOG_FD])
+then
+  ac_cv_as_needed=yes
+else
+  ac_cv_as_needed=no
+fi
+rm -f conftest*])
+AS_IF([test "x$ac_cv_as_needed" = xyes],
+      [LD_AS_NEEDED=-Wl,--as-needed], [LD_AS_NEEDED=])
+AC_SUBST(LD_AS_NEEDED)
+
+AC_CACHE_CHECK([for __builtin_popcount], ac_cv_popcount, [dnl
+AC_LINK_IFELSE([AC_LANG_PROGRAM([], [[exit (__builtin_popcount (127));]])],
+	       ac_cv_popcount=yes, ac_cv_popcount=no)])
+AS_IF([test "x$ac_cv_popcount" = xyes],
+      [AC_DEFINE([HAVE_BUILTIN_POPCOUNT], [1], [Have __builtin_popcount.])])
+
 AC_CACHE_CHECK([for __thread support], ac_cv_tls, [dnl
 # Use the same flags that we use for our DSOs, so the test is representative.
 # Some old compiler/linker/libc combinations fail some ways and not others.
@@ -105,7 +153,10 @@ static __thread int a; int foo (int b) { return a + b; }]],
 CFLAGS="$save_CFLAGS"
 LDFLAGS="$save_LDFLAGS"])
 AS_IF([test "x$ac_cv_tls" != xyes],
-      AC_MSG_ERROR([__thread support required]))
+      [AS_IF([test "$use_locks" = yes],
+	     [AC_MSG_ERROR([--enable-thread-safety requires __thread support])],
+	     [AC_DEFINE([__thread], [/* empty: no multi-thread support */],
+			[Stubbed out if missing compiler support.])])])
 
 dnl This test must come as early as possible after the compiler configuration
 dnl tests, because the choice of the file model can (in principle) affect
@@ -192,6 +243,11 @@ AM_CONDITIONAL(GCOV, test "$use_gcov" = yes)
 
 AM_CONDITIONAL(BUILD_STATIC, [dnl
 test "$use_mudflap" = yes -o "$use_gprof" = yes -o "$use_gcov" = yes])
+
+AC_ARG_ENABLE([werror],
+AS_HELP_STRING([--disable-werror],[do not build with -Werror]),
+	       [enable_werror=$enableval], [enable_werror=yes])
+AM_CONDITIONAL(BUILD_WERROR, test "$enable_werror" = yes)
 
 AC_ARG_ENABLE([tests-rpath],
 AS_HELP_STRING([--enable-tests-rpath],[build $ORIGIN-using rpath into tests]),
@@ -304,6 +360,6 @@ case "$eu_version" in
 esac
 
 # Round up to the next release API (x.y) version.
-eu_version=$(( (eu_version + 999) / 1000 ))
+eu_version=`expr \( $eu_version + 999 \) / 1000`
 
 AC_OUTPUT

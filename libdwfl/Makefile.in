@@ -38,11 +38,12 @@ host_triplet = @host@
 DIST_COMMON = $(noinst_HEADERS) $(pkginclude_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(top_srcdir)/config/eu.am ChangeLog
-@MUDFLAP_TRUE@am__append_1 = -fmudflap
-@MUDFLAP_FALSE@am__append_2 = libdwfl_pic.a
-@ZLIB_TRUE@am__append_3 = gzip.c
-@BZLIB_TRUE@am__append_4 = bzip2.c
-@LZMA_TRUE@am__append_5 = lzma.c
+@BUILD_WERROR_TRUE@am__append_1 = $(if $($(*F)_no_Werror),,-Werror)
+@MUDFLAP_TRUE@am__append_2 = -fmudflap
+@MUDFLAP_FALSE@am__append_3 = libdwfl_pic.a
+@ZLIB_TRUE@am__append_4 = gzip.c
+@BZLIB_TRUE@am__append_5 = bzip2.c
+@LZMA_TRUE@am__append_6 = lzma.c
 @MUDFLAP_TRUE@am_libdwfl_pic_a_OBJECTS =
 subdir = libdwfl
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -188,6 +189,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LD_AS_NEEDED = @LD_AS_NEEDED@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
@@ -217,6 +219,7 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 USE_NLS = @USE_NLS@
 VERSION = 1
+WEXTRA = @WEXTRA@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
@@ -279,10 +282,9 @@ INCLUDES = -I. -I$(srcdir) -I$(top_srcdir)/lib -I.. -I$(srcdir) \
 	-I$(srcdir)/../libelf -I$(srcdir)/../libebl \
 	-I$(srcdir)/../libdw
 AM_CFLAGS = -std=gnu99 -Wall -Wshadow $(if \
-	$($(*F)_no_Werror),,-Werror) $(if \
-	$($(*F)_no_Wunused),,-Wunused -Wextra) $(if \
+	$($(*F)_no_Wunused),,-Wunused $(WEXTRA)) $(if \
 	$($(*F)_no_Wformat),-Wno-format,-Wformat=2) $($(*F)_CFLAGS) \
-	$(am__append_1)
+	$(am__append_1) $(am__append_2)
 @MUDFLAP_FALSE@libmudflap = 
 @MUDFLAP_TRUE@libmudflap = -lmudflap
 COMPILE.os = $(filter-out -fprofile-arcs -ftest-coverage $(no_mudflap.os),\
@@ -290,7 +292,7 @@ COMPILE.os = $(filter-out -fprofile-arcs -ftest-coverage $(no_mudflap.os),\
 
 CLEANFILES = *.gcno *.gcda $(am_libdwfl_pic_a_OBJECTS)
 textrel_check = if readelf -d $@ | fgrep -q TEXTREL; then exit 1; fi
-noinst_LIBRARIES = libdwfl.a $(am__append_2)
+noinst_LIBRARIES = libdwfl.a $(am__append_3)
 pkginclude_HEADERS = libdwfl.h
 libdwfl_a_SOURCES = dwfl_begin.c dwfl_end.c dwfl_error.c \
 	dwfl_version.c dwfl_module.c dwfl_report_elf.c relocate.c \
@@ -311,8 +313,8 @@ libdwfl_a_SOURCES = dwfl_begin.c dwfl_end.c dwfl_error.c \
 	dwfl_module_getsym.c dwfl_module_addrname.c \
 	dwfl_module_addrsym.c dwfl_module_return_value_location.c \
 	dwfl_module_register_names.c dwfl_segment_report_module.c \
-	link_map.c core-file.c open.c image-header.c $(am__append_3) \
-	$(am__append_4) $(am__append_5)
+	link_map.c core-file.c open.c image-header.c $(am__append_4) \
+	$(am__append_5) $(am__append_6)
 @MUDFLAP_FALSE@libdwfl = $(libdw)
 @MUDFLAP_TRUE@libdwfl = libdwfl.a $(libdw) $(libebl) $(libelf) $(libeu)
 @MUDFLAP_FALSE@libdw = ../libdw/libdw.so

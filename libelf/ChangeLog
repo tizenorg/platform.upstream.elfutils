@@ -34,6 +34,11 @@
 
 	* elf-knowledge.h (SECTION_STRIP_P): Remove < SHT_NUM check.
 
+2011-03-10  Roland McGrath  <roland@redhat.com>
+
+	* gnuhash_xlate.h (elf_cvt_gnuhash): Avoid post-increment in bswap_32
+	argument, since some implementations are buggy macros.
+
 2011-02-26  Mark Wielaard  <mjw@redhat.com>
 
 	* elf_end.c (elf_end): Call rwlock_unlock before rwlock_fini.
@@ -753,6 +758,11 @@
 2005-05-09  Ulrich Drepper  <drepper@redhat.com>
 
 	* elf.h: Update from glibc.
+
+2005-05-31  Roland McGrath  <roland@redhat.com>
+
+	* Makefile.am (WEXTRA): New variable, substituted by configure.
+	(AM_CFLAGS): Use it in place of -Wextra.
 
 2005-05-08  Roland McGrath  <roland@redhat.com>
 

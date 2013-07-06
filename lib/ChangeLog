@@ -35,6 +35,9 @@
 
 2009-01-23  Roland McGrath  <roland@redhat.com>
 
+	* eu-config.h [! HAVE_BUILTIN_POPCOUNT]
+	(__builtin_popcount): New inline function.
+
 	* eu-config.h: Add multiple inclusion protection.
 
 2009-01-17  Ulrich Drepper  <drepper@redhat.com>
@@ -90,6 +93,11 @@
 	* crc32_file.c: New file.
 	* Makefile.am (libeu_a_SOURCES): Add it.
 	* system.h: Declare crc32_file.
+
+2005-02-07  Roland McGrath  <roland@redhat.com>
+
+	* Makefile.am (WEXTRA): New variable, substituted by configure.
+	(AM_CFLAGS): Use it in place of -Wextra.
 
 2005-04-30  Ulrich Drepper  <drepper@redhat.com>
 

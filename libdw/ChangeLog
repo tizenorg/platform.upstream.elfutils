@@ -82,6 +82,10 @@
 
 	* Makefile.am (known-dwarf.h): Run gawk on config/known-dwarf.awk.
 
+2011-07-20  Mark Wielaard  <mjw@redhat.com>
+
+	* dwarf_begin_elf.c: Add fallback for be64toh if not defined.
+
 2011-07-14  Mark Wielaard  <mjw@redhat.com>
 
 	* libdw.h (dwarf_offdie): Fix documentation to mention .debug_info.
@@ -440,6 +444,10 @@
 2009-08-21  Josh Stone  <jistone@redhat.com>
 
 	* dwarf_hasattr_integrate.c: Integrate DW_AT_specification too.
+
+2009-08-17  Roland McGrath  <roland@redhat.com>
+
+	* libdw.h: Disable extern inlines for GCC 4.2.
 
 2009-08-10  Roland McGrath  <roland@redhat.com>
 
@@ -1206,6 +1214,11 @@
 	* memory-access.c: New file.
 	* Makefile.am (libdw_a_SOURCES): Add it.
 	(DEFS): Add -DIS_LIBDW.
+
+2005-05-31  Roland McGrath  <roland@redhat.com>
+
+	* Makefile.am (WEXTRA): New variable, substituted by configure.
+	(AM_CFLAGS): Use it in place of -Wextra.
 
 2005-05-31  Roland McGrath  <roland@redhat.com>
 

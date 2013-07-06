@@ -38,6 +38,9 @@
 
 2009-01-23  Roland McGrath  <roland@redhat.com>
 
+	* i386_disasm.c (i386_disasm): Add abort after assert-constant for old
+	compilers that don't realize it's noreturn.
+
 	* Makefile.am (i386_parse_CFLAGS): Use quotes around command
 	substitution that can produce leading whitespace.
 
@@ -366,6 +369,11 @@
 	* defs/i386: New file.
 	* defs/i386.doc: New file.
 	* defs/x86_64: New file.
+
+2005-04-04  Roland McGrath  <roland@redhat.com>
+
+	* Makefile.am (WEXTRA): New variable, substituted by configure.
+	(AM_CFLAGS): Use it instead of -Wextra.
 
 2005-02-15  Ulrich Drepper  <drepper@redhat.com>
 

@@ -447,10 +447,10 @@ handle_address (const char *string, Dwfl *dwfl)
       bool parsed = false;
       int i, j;
       char *name = NULL;
-      if (sscanf (string, "(%m[^)])%" PRIiMAX "%n", &name, &addr, &i) == 2
+      if (sscanf (string, "(%a[^)])%" PRIiMAX "%n", &name, &addr, &i) == 2
 	  && string[i] == '\0')
 	parsed = adjust_to_section (name, &addr, dwfl);
-      switch (sscanf (string, "%m[^-+]%n%" PRIiMAX "%n", &name, &i, &addr, &j))
+      switch (sscanf (string, "%a[^-+]%n%" PRIiMAX "%n", &name, &i, &addr, &j))
 	{
 	default:
 	  break;

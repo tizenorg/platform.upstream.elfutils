@@ -39,11 +39,12 @@ host_triplet = @host@
 DIST_COMMON = $(include_HEADERS) $(noinst_HEADERS) \
 	$(pkginclude_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(top_srcdir)/config/eu.am ChangeLog
-@MUDFLAP_TRUE@am__append_1 = -fmudflap
-@BUILD_STATIC_TRUE@am__append_2 = -fpic
+@BUILD_WERROR_TRUE@am__append_1 = $(if $($(*F)_no_Werror),,-Werror)
+@MUDFLAP_TRUE@am__append_2 = -fmudflap
+@BUILD_STATIC_TRUE@am__append_3 = -fpic
 @MUDFLAP_FALSE@noinst_PROGRAMS = $(am__EXEEXT_1)
 @MUDFLAP_TRUE@am_libelf_pic_a_OBJECTS =
-@MUDFLAP_FALSE@@USE_LOCKS_TRUE@am__append_3 = -lpthread
+@MUDFLAP_FALSE@@USE_LOCKS_TRUE@am__append_4 = -lpthread
 subdir = libelf
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/nls.m4 $(top_srcdir)/m4/po.m4 \
@@ -195,6 +196,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LD_AS_NEEDED = @LD_AS_NEEDED@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
@@ -224,6 +226,7 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 USE_NLS = @USE_NLS@
 VERSION = 1
+WEXTRA = @WEXTRA@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
@@ -284,10 +287,9 @@ top_srcdir = @top_srcdir@
 zip_LIBS = @zip_LIBS@
 INCLUDES = -I. -I$(srcdir) -I$(top_srcdir)/lib -I..
 AM_CFLAGS = -std=gnu99 -Wall -Wshadow $(if \
-	$($(*F)_no_Werror),,-Werror) $(if \
-	$($(*F)_no_Wunused),,-Wunused -Wextra) $(if \
+	$($(*F)_no_Wunused),,-Wunused $(WEXTRA)) $(if \
 	$($(*F)_no_Wformat),-Wno-format,-Wformat=2) $($(*F)_CFLAGS) \
-	$(am__append_1) $(am__append_2)
+	$(am__append_1) $(am__append_2) $(am__append_3)
 @MUDFLAP_FALSE@libmudflap = 
 @MUDFLAP_TRUE@libmudflap = -lmudflap
 COMPILE.os = $(filter-out -fprofile-arcs -ftest-coverage $(no_mudflap.os),\
@@ -352,7 +354,7 @@ libelf_a_SOURCES = elf_version.c elf_hash.c elf_error.c elf_fill.c \
 
 @MUDFLAP_FALSE@libelf_pic_a_SOURCES = 
 @MUDFLAP_FALSE@am_libelf_pic_a_OBJECTS = $(libelf_a_SOURCES:.c=.os)
-@MUDFLAP_FALSE@libelf_so_LDLIBS = $(am__append_3)
+@MUDFLAP_FALSE@libelf_so_LDLIBS = $(am__append_4)
 @MUDFLAP_FALSE@libelf_so_SOURCES = 
 noinst_HEADERS = elf.h abstract.h common.h exttypes.h gelf_xlate.h libelfP.h \
 		 version_xlate.h gnuhash_xlate.h note_xlate.h dl-hash.h

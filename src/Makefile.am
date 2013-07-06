@@ -95,6 +95,9 @@ addr2line_no_Wformat = yes
 # XXX While the file is not finished, don't warn about this
 ldgeneric_no_Wunused = yes
 
+# Buggy old compilers.
+readelf_no_Werror = yes
+
 readelf_LDADD = $(libdw) $(libebl) $(libelf) $(libeu) $(libmudflap) -ldl
 nm_LDADD = $(libdw) $(libebl) $(libelf) $(libeu) $(libmudflap) -ldl \
 	   $(demanglelib)

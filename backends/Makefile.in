@@ -38,7 +38,8 @@ build_triplet = @build@
 host_triplet = @host@
 DIST_COMMON = $(noinst_HEADERS) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(top_srcdir)/config/eu.am ChangeLog
-@MUDFLAP_TRUE@am__append_1 = -fmudflap
+@BUILD_WERROR_TRUE@am__append_1 = $(if $($(*F)_no_Werror),,-Werror)
+@MUDFLAP_TRUE@am__append_2 = -fmudflap
 subdir = backends
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps = $(top_srcdir)/m4/nls.m4 $(top_srcdir)/m4/po.m4 \
@@ -172,6 +173,7 @@ INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
 LDFLAGS = @LDFLAGS@
+LD_AS_NEEDED = @LD_AS_NEEDED@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
@@ -201,6 +203,7 @@ SHELL = @SHELL@
 STRIP = @STRIP@
 USE_NLS = @USE_NLS@
 VERSION = @VERSION@
+WEXTRA = @WEXTRA@
 XGETTEXT = @XGETTEXT@
 XGETTEXT_015 = @XGETTEXT_015@
 XGETTEXT_EXTRA_OPTIONS = @XGETTEXT_EXTRA_OPTIONS@
@@ -263,10 +266,9 @@ INCLUDES = -I. -I$(srcdir) -I$(top_srcdir)/lib -I.. \
 	-I$(top_srcdir)/libebl -I$(top_srcdir)/libasm \
 	-I$(top_srcdir)/libelf -I$(top_srcdir)/libdw
 AM_CFLAGS = -std=gnu99 -Wall -Wshadow $(if \
-	$($(*F)_no_Werror),,-Werror) $(if \
-	$($(*F)_no_Wunused),,-Wunused -Wextra) $(if \
+	$($(*F)_no_Wunused),,-Wunused $(WEXTRA)) $(if \
 	$($(*F)_no_Wformat),-Wno-format,-Wformat=2) $($(*F)_CFLAGS) \
-	$(am__append_1)
+	$(am__append_1) $(am__append_2)
 @MUDFLAP_FALSE@libmudflap = 
 @MUDFLAP_TRUE@libmudflap = -lmudflap
 COMPILE.os = $(filter-out -fprofile-arcs -ftest-coverage $(no_mudflap.os),\
@@ -725,7 +727,7 @@ libebl_%.so libebl_%.map: libebl_%_pic.a $(libelf) $(libdw)
 	$(LINK) -shared -o $(@:.map=.so) \
 		-Wl,--whole-archive $< $(cpu_$*) -Wl,--no-whole-archive \
 		-Wl,--version-script,$(@:.so=.map) \
-		-Wl,-z,defs -Wl,--as-needed $(libelf) $(libdw) $(libmudflap)
+		-Wl,-z,defs $(LD_AS_NEEDED) $(libelf) $(libdw) $(libmudflap)
 	$(textrel_check)
 
 libebl_i386.so: $(cpu_i386)

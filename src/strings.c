@@ -43,6 +43,10 @@
 
 #include <system.h>
 
+#ifndef MAP_POPULATE
+# define MAP_POPULATE 0
+#endif
+
 
 /* Prototypes of local functions.  */
 static int read_fd (int fd, const char *fname, off64_t fdlen);
@@ -483,8 +487,13 @@ map_file (int fd, off64_t start_off, off64_t fdlen, size_t *map_sizep)
 		    fd, start_off);
       if (mem != MAP_FAILED)
 	{
+#if !defined POSIX_MADV_SEQUENTIAL && defined MADV_SEQUENTIAL
+# define POSIX_MADV_SEQUENTIAL MADV_SEQUENTIAL
+#endif
+#ifdef POSIX_MADV_SEQUENTIAL
 	  /* We will go through the mapping sequentially.  */
 	  (void) posix_madvise (mem, map_size, POSIX_MADV_SEQUENTIAL);
+#endif
 	  break;
 	}
       if (errno != EINVAL && errno != ENOMEM)
@@ -576,9 +585,11 @@ read_block (int fd, const char *fname, off64_t fdlen, off64_t from, off64_t to)
       elfmap_off = from & ~(ps - 1);
       elfmap_base = elfmap = map_file (fd, elfmap_off, fdlen, &elfmap_size);
 
+#ifdef POSIX_FADV_SEQUENTIAL
       if (unlikely (elfmap == MAP_FAILED))
 	/* Let the kernel know we are going to read everything in sequence.  */
 	(void) posix_fadvise (fd, 0, 0, POSIX_FADV_SEQUENTIAL);
+#endif
     }
 
   if (unlikely (elfmap == MAP_FAILED))
