@@ -1,28 +1,20 @@
 /* Print symbol information from ELF file in human-readable form.
    Copyright (C) 2000-2008, 2009, 2011, 2012 Red Hat, Inc.
-   This file is part of Red Hat elfutils.
+   This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2000.
 
-   Red Hat elfutils is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by the
-   Free Software Foundation; version 2 of the License.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
 
-   Red Hat elfutils is distributed in the hope that it will be useful, but
+   elfutils is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with Red Hat elfutils; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301 USA.
-
-   Red Hat elfutils is an included package of the Open Invention Network.
-   An included package of the Open Invention Network is a package for which
-   Open Invention Network licensees cross-license their patents.  No patent
-   license is granted, either expressly or impliedly, by designation as an
-   included package.  Should you wish to participate in the Open Invention
-   Network licensing program, please visit www.openinventionnetwork.com
-   <http://www.openinventionnetwork.com>.  */
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -937,15 +929,15 @@ show_symbols_bsd (Elf *elf, const GElf_Ehdr *ehdr, GElf_Word strndx,
 
   static const char *const fmtstrs[] =
     {
-      [radix_hex] = "%8$s%2$0*1$" PRIx64 "%10$s %9$s%3$c%4$s %5$s",
-      [radix_decimal] = "%8$s%*" PRId64 "%10$s %9$s%3$c%4$s %5$s",
-      [radix_octal] = "%8$s%2$0*1$" PRIo64 "%10$s %9$s%3$c%4$s %5$s"
+      [radix_hex] = "%6$s%2$0*1$" PRIx64 "%8$s %7$s%3$c%4$s %5$s",
+      [radix_decimal] = "%6$s%*" PRId64 "%8$s %7$s%3$c%4$s %5$s",
+      [radix_octal] = "%6$s%2$0*1$" PRIo64 "%8$s %7$s%3$c%4$s %5$s"
     };
   static const char *const sfmtstrs[] =
     {
-      [radix_hex] = "%8$s%2$0*1$" PRIx64 "%10$s %7$0*6$" PRIx64 " %9$s%3$c%4$s %5$s",
-      [radix_decimal] = "%8$s%2$*1$" PRId64 "%10$s %7$*6$" PRId64 " %9$s%3$c%4$s %5$s",
-      [radix_octal] = "%8$s%2$0*1$" PRIo64 "%10$s %7$0*6$" PRIo64 " %9$s%3$c%4$s %5$s"
+      [radix_hex] = "%6$s%2$0*1$" PRIx64 "%8$s %10$0*9$" PRIx64 " %7$s%3$c%4$s %5$s",
+      [radix_decimal] = "%6$s%2$*1$" PRId64 "%8$s %10$*9$" PRId64 " %7$s%3$c%4$s %5$s",
+      [radix_octal] = "%6$s%2$0*1$" PRIo64 "%8$s %10$0*9$" PRIo64 " %7$s%3$c%4$s %5$s"
     };
 
 #ifdef USE_DEMANGLE
@@ -1028,10 +1020,10 @@ show_symbols_bsd (Elf *elf, const GElf_Ehdr *ehdr, GElf_Word strndx,
 		  digits, syms[cnt].sym.st_value,
 		  class_type_char (elf, ehdr, &syms[cnt].sym), marker,
 		  symstr,
-		  digits, (uint64_t) syms[cnt].sym.st_size,
 		  color_mode ? color_address : "",
 		  color,
-		  color_mode ? color_off : "");
+		  color_mode ? color_off : "",
+		  digits, (uint64_t) syms[cnt].sym.st_size);
 	}
 
       if (color_mode)

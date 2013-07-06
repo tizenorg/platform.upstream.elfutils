@@ -541,26 +541,29 @@ char *i386_text;
 /* Copyright (C) 2004, 2005, 2007, 2008 Red Hat, Inc.
    Written by Ulrich Drepper <drepper@redhat.com>, 2004.
 
-   Red Hat elfutils is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by the
-   Free Software Foundation; version 2 of the License.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of either
 
-   Red Hat elfutils is distributed in the hope that it will be useful, but
+     * the GNU Lesser General Public License as published by the Free
+       Software Foundation; either version 3 of the License, or (at
+       your option) any later version
+
+   or
+
+     * the GNU General Public License as published by the Free
+       Software Foundation; either version 2 of the License, or (at
+       your option) any later version
+
+   or both in parallel, as here.
+
+   elfutils is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with Red Hat elfutils; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301 USA.
-
-   Red Hat elfutils is an included package of the Open Invention Network.
-   An included package of the Open Invention Network is a package for which
-   Open Invention Network licensees cross-license their patents.  No patent
-   license is granted, either expressly or impliedly, by designation as an
-   included package.  Should you wish to participate in the Open Invention
-   Network licensing program, please visit www.openinventionnetwork.com
-   <http://www.openinventionnetwork.com>.  */
+   You should have received copies of the GNU General Public License and
+   the GNU Lesser General Public License along with this program.  If
+   not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -577,7 +580,7 @@ char *i386_text;
 static void eat_to_eol (void);
 static void invalid_char (int ch);
 
-#line 581 "i386_lex.c"
+#line 584 "i386_lex.c"
 
 #define INITIAL 0
 #define MAIN 1
@@ -763,10 +766,10 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 54 "i386_lex.l"
+#line 57 "i386_lex.l"
 
 
-#line 770 "i386_lex.c"
+#line 773 "i386_lex.c"
 
 	if ( !(yy_init) )
 		{
@@ -858,119 +861,119 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 56 "i386_lex.l"
+#line 59 "i386_lex.l"
 { return kMASK; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 58 "i386_lex.l"
+#line 61 "i386_lex.l"
 { return kPREFIX; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 59 "i386_lex.l"
+#line 62 "i386_lex.l"
 { return kSUFFIX; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 61 "i386_lex.l"
+#line 64 "i386_lex.l"
 { return kSYNONYM; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 63 "i386_lex.l"
+#line 66 "i386_lex.l"
 { i386_lval.num = strtoul (i386_text, NULL, 10);
 				  return kNUMBER; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 66 "i386_lex.l"
+#line 69 "i386_lex.l"
 { BEGIN (MAIN); return kPERCPERC; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 69 "i386_lex.l"
+#line 72 "i386_lex.l"
 { return '0'; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 70 "i386_lex.l"
+#line 73 "i386_lex.l"
 { return '1'; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 72 "i386_lex.l"
+#line 75 "i386_lex.l"
 { i386_lval.str = xstrndup (i386_text + 1,
 							    i386_leng - 2);
 				  return kBITFIELD; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 76 "i386_lex.l"
+#line 79 "i386_lex.l"
 { i386_lval.str = (void *) -1l;
 				  return kID; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 79 "i386_lex.l"
+#line 82 "i386_lex.l"
 { i386_lval.str = xstrndup (i386_text, i386_leng);
 				  return kID; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 82 "i386_lex.l"
+#line 85 "i386_lex.l"
 { return ','; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 84 "i386_lex.l"
+#line 87 "i386_lex.l"
 { return ':'; }
 	YY_BREAK
 case 14:
 /* rule 14 can match eol */
 YY_RULE_SETUP
-#line 86 "i386_lex.l"
+#line 89 "i386_lex.l"
 { /* IGNORE */ }
 	YY_BREAK
 case 15:
 /* rule 15 can match eol */
 YY_RULE_SETUP
-#line 88 "i386_lex.l"
+#line 91 "i386_lex.l"
 { return '\n'; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 90 "i386_lex.l"
+#line 93 "i386_lex.l"
 { eat_to_eol (); }
 	YY_BREAK
 case 17:
 /* rule 17 can match eol */
 YY_RULE_SETUP
-#line 92 "i386_lex.l"
+#line 95 "i386_lex.l"
 { /* IGNORE */ }
 	YY_BREAK
 case 18:
 /* rule 18 can match eol */
 YY_RULE_SETUP
-#line 94 "i386_lex.l"
+#line 97 "i386_lex.l"
 { return kSPACE; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 96 "i386_lex.l"
+#line 99 "i386_lex.l"
 { i386_lval.ch = *i386_text; return kCHAR; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 98 "i386_lex.l"
+#line 101 "i386_lex.l"
 { invalid_char (*i386_text); }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 101 "i386_lex.l"
+#line 104 "i386_lex.l"
 ECHO;
 	YY_BREAK
-#line 974 "i386_lex.c"
+#line 977 "i386_lex.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(MAIN):
 	yyterminate();
@@ -1980,7 +1983,7 @@ void i386_free (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 101 "i386_lex.l"
+#line 104 "i386_lex.l"
 
 
 

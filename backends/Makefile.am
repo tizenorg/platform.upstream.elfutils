@@ -1,39 +1,42 @@
 ## Process this file with automake to create Makefile.in
 ##
 ## Copyright (C) 2000-2010 Red Hat, Inc.
-## This file is part of Red Hat elfutils.
+## Copyright (C) 2012 Tilera Corporation
+## This file is part of elfutils.
 ##
-## Red Hat elfutils is free software; you can redistribute it and/or modify
-## it under the terms of the GNU General Public License as published by the
-## Free Software Foundation; version 2 of the License.
+## This file is free software; you can redistribute it and/or modify
+## it under the terms of either
 ##
-## Red Hat elfutils is distributed in the hope that it will be useful, but
+##   * the GNU Lesser General Public License as published by the Free
+##     Software Foundation; either version 3 of the License, or (at
+##     your option) any later version
+##
+## or
+##
+##   * the GNU General Public License as published by the Free
+##     Software Foundation; either version 2 of the License, or (at
+##     your option) any later version
+##
+## or both in parallel, as here.
+##
+## elfutils is distributed in the hope that it will be useful, but
 ## WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ## General Public License for more details.
 ##
-## You should have received a copy of the GNU General Public License along
-## with Red Hat elfutils; if not, write to the Free Software Foundation,
-## Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301 USA.
-##
-## Red Hat elfutils is an included package of the Open Invention Network.
-## An included package of the Open Invention Network is a package for which
-## Open Invention Network licensees cross-license their patents.  No patent
-## license is granted, either expressly or impliedly, by designation as an
-## included package.  Should you wish to participate in the Open Invention
-## Network licensing program, please visit www.openinventionnetwork.com
-## <http://www.openinventionnetwork.com>.
-##
+## You should have received copies of the GNU General Public License and
+## the GNU Lesser General Public License along with this program.  If
+## not, see <http://www.gnu.org/licenses/>.
 include $(top_srcdir)/config/eu.am
 INCLUDES += -I$(top_srcdir)/libebl -I$(top_srcdir)/libasm \
 	   -I$(top_srcdir)/libelf -I$(top_srcdir)/libdw
 
 
-modules = i386 sh x86_64 ia64 alpha arm sparc ppc ppc64 s390
+modules = i386 sh x86_64 ia64 alpha arm sparc ppc ppc64 s390 tilegx
 libebl_pic = libebl_i386_pic.a libebl_sh_pic.a libebl_x86_64_pic.a \
 	     libebl_ia64_pic.a libebl_alpha_pic.a libebl_arm_pic.a \
 	     libebl_sparc_pic.a libebl_ppc_pic.a libebl_ppc64_pic.a \
-	     libebl_s390_pic.a
+	     libebl_s390_pic.a libebl_tilegx_pic.a
 noinst_LIBRARIES = $(libebl_pic)
 noinst_DATA = $(libebl_pic:_pic.a=.so)
 
@@ -94,6 +97,11 @@ am_libebl_ppc64_pic_a_OBJECTS = $(ppc64_SRCS:.c=.os)
 s390_SRCS = s390_init.c s390_symbol.c s390_regs.c s390_retval.c
 libebl_s390_pic_a_SOURCES = $(s390_SRCS)
 am_libebl_s390_pic_a_OBJECTS = $(s390_SRCS:.c=.os)
+
+tilegx_SRCS = tilegx_init.c tilegx_symbol.c tilegx_regs.c \
+              tilegx_retval.c tilegx_corenote.c
+libebl_tilegx_pic_a_SOURCES = $(tilegx_SRCS)
+am_libebl_tilegx_pic_a_OBJECTS = $(tilegx_SRCS:.c=.os)
 
 
 libebl_%.so libebl_%.map: libebl_%_pic.a $(libelf) $(libdw)

@@ -69,7 +69,7 @@ typedef union YYSTYPE
 {
 
 /* Line 2068 of yacc.c  */
-#line 214 "i386_parse.y"
+#line 217 "i386_parse.y"
 
   unsigned long int num;
   char *str;

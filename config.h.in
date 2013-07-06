@@ -3,6 +3,9 @@
 /* Should ar and ranlib use -D behavior by default? */
 #undef DEFAULT_AR_DETERMINISTIC
 
+/* Defined if libdw should support GNU ref_alt FORM, dwz multi files. */
+#undef ENABLE_DWZ
+
 /* $libdir subdirectory containing libebl modules. */
 #undef LIBEBL_SUBDIR
 

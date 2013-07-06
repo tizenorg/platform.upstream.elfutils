@@ -3,20 +3,21 @@ dnl Configure input file for elfutils.                     -*-autoconf-*-
 dnl
 dnl Copyright (C) 1996-2012 Red Hat, Inc.
 dnl
-dnl This program is free software; you can redistribute it and/or modify
-dnl it under the terms of the GNU General Public License as published by
-dnl the Free Software Foundation, version 2.
+dnl This file is part of elfutils.
 dnl
-dnl This program is distributed in the hope that it will be useful,
-dnl but WITHOUT ANY WARRANTY; without even the implied warranty of
-dnl MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-dnl GNU General Public License for more details.
+dnl  This file is free software; you can redistribute it and/or modify
+dnl  it under the terms of the GNU General Public License as published by
+dnl  the Free Software Foundation; either version 3 of the License, or
+dnl  (at your option) any later version.
 dnl
-dnl You should have received a copy of the GNU General Public License
-dnl along with this program; if not, write to the Free Software Foundation,
-dnl Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301, USA.
+dnl  elfutils is distributed in the hope that it will be useful, but
+dnl  WITHOUT ANY WARRANTY; without even the implied warranty of
+dnl  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+dnl  GNU General Public License for more details.
 dnl
-AC_INIT([Red Hat elfutils],[0.153],[http://bugzilla.redhat.com/bugzilla/],[elfutils])
+dnl  You should have received a copy of the GNU General Public License
+dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+AC_INIT([elfutils],[0.155],[https://bugzilla.redhat.com/],[elfutils])
 
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_FILES([config/Makefile])
@@ -65,6 +66,14 @@ AM_CONDITIONAL(USE_LOCKS, test "$use_locks" = yes)
 AS_IF([test "$use_locks" = yes], [AC_DEFINE(USE_LOCKS)])
 
 AH_TEMPLATE([USE_LOCKS], [Defined if libraries should be thread-safe.])
+
+AC_ARG_ENABLE([dwz],
+AS_HELP_STRING([--enable-dwz], [enable experimental GNU ref_alt FORM, dwz multi file support in libdw]),
+enable_dwz=$enableval, enable_dwz=no)
+AM_CONDITIONAL(ENABLE_DWZ, test "$enable_dwz" = yes)
+AS_IF([test "$enable_dwz" = yes], [AC_DEFINE(ENABLE_DWZ)])
+
+AH_TEMPLATE([ENABLE_DWZ], [Defined if libdw should support GNU ref_alt FORM, dwz multi files.])
 
 AC_PROG_CC
 AC_PROG_RANLIB

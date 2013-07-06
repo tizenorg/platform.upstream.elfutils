@@ -1,27 +1,19 @@
 #! /bin/sh
 # Copyright (C) 2005-2012 Red Hat, Inc.
-# This file is part of Red Hat elfutils.
+# This file is part of elfutils.
 #
-# Red Hat elfutils is free software; you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by the
-# Free Software Foundation; version 2 of the License.
+# This file is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 3 of the License, or
+# (at your option) any later version.
 #
-# Red Hat elfutils is distributed in the hope that it will be useful, but
+# elfutils is distributed in the hope that it will be useful, but
 # WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-# General Public License for more details.
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License along
-# with Red Hat elfutils; if not, write to the Free Software Foundation,
-# Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301 USA.
-#
-# Red Hat elfutils is an included package of the Open Invention Network.
-# An included package of the Open Invention Network is a package for which
-# Open Invention Network licensees cross-license their patents.  No patent
-# license is granted, either expressly or impliedly, by designation as an
-# included package.  Should you wish to participate in the Open Invention
-# Network licensing program, please visit www.openinventionnetwork.com
-# <http://www.openinventionnetwork.com>.
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 # This file is sourced by ". $srcdir/test-subr.sh" at the start of
@@ -110,4 +102,37 @@ ${LD_LIBRARY_PATH:+:}$LD_LIBRARY_PATH" \
 program_transform()
 {
   echo "$*" | sed "${program_transform_name}"
+}
+
+self_test_files=`echo ../src/addr2line ../src/elfcmp ../src/elflint \
+../src/findtextrel ../src/ld ../src/nm ../src/objdump ../src/readelf \
+../src/size ../src/strip ../libelf/libelf.so ../libdw/libdw.so \
+../libasm/libasm.so ../backends/libebl_*.so`
+
+# Provide a command to run on all self-test files with testrun.
+testrun_on_self()
+{
+  exit_status=0
+
+  for file in $self_test_files; do
+      testrun $* $file \
+	  || { echo "*** failure in $* $file"; exit_status=1; }
+  done
+
+  # Only exit if something failed
+  if test $exit_status != 0; then exit $exit_status; fi
+}
+
+# Same as above, but redirects stdout to /dev/null
+testrun_on_self_quiet()
+{
+  exit_status=0
+
+  for file in $self_test_files; do
+      testrun $* $file > /dev/null \
+	  || { echo "*** failure in $* $file"; exit_status=1; }
+  done
+
+  # Only exit if something failed
+  if test $exit_status != 0; then exit $exit_status; fi
 }

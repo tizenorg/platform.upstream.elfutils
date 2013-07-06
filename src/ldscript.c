@@ -78,29 +78,21 @@
 
 /* Parser for linker scripts.
    Copyright (C) 2001-2011 Red Hat, Inc.
-   This file is part of Red Hat elfutils.
+   This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2001.
 
-   Red Hat elfutils is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by the
-   Free Software Foundation; version 2 of the License.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
 
-   Red Hat elfutils is distributed in the hope that it will be useful, but
+   elfutils is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with Red Hat elfutils; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301 USA.
-
-   Red Hat elfutils is an included package of the Open Invention Network.
-   An included package of the Open Invention Network is a package for which
-   Open Invention Network licensees cross-license their patents.  No patent
-   license is granted, either expressly or impliedly, by designation as an
-   included package.  Should you wish to participate in the Open Invention
-   Network licensing program, please visit www.openinventionnetwork.com
-   <http://www.openinventionnetwork.com>.  */
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -146,7 +138,7 @@ extern int yylex (void);
 
 
 /* Line 268 of yacc.c  */
-#line 150 "ldscript.c"
+#line 142 "ldscript.c"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -239,7 +231,7 @@ typedef union YYSTYPE
 {
 
 /* Line 293 of yacc.c  */
-#line 71 "ldscript.y"
+#line 63 "ldscript.y"
 
   uintmax_t num;
   enum expression_tag op;
@@ -257,7 +249,7 @@ typedef union YYSTYPE
 
 
 /* Line 293 of yacc.c  */
-#line 261 "ldscript.c"
+#line 253 "ldscript.c"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -269,7 +261,7 @@ typedef union YYSTYPE
 
 
 /* Line 343 of yacc.c  */
-#line 273 "ldscript.c"
+#line 265 "ldscript.c"
 
 #ifdef short
 # undef short
@@ -587,13 +579,13 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   143,   143,   144,   148,   149,   152,   157,   161,   166,
-     172,   176,   182,   193,   195,   197,   199,   203,   208,   212,
-     217,   229,   253,   255,   259,   264,   268,   273,   280,   287,
-     298,   300,   304,   307,   310,   315,   317,   323,   329,   335,
-     341,   347,   352,   357,   359,   363,   368,   372,   373,   376,
-     387,   389,   394,   399,   403,   409,   415,   424,   426,   430,
-     432,   437,   443,   447,   449,   453,   455
+       0,   135,   135,   136,   140,   141,   144,   149,   153,   158,
+     164,   168,   174,   185,   187,   189,   191,   195,   200,   204,
+     209,   221,   245,   247,   251,   256,   260,   265,   272,   279,
+     290,   292,   296,   299,   302,   307,   309,   315,   321,   327,
+     333,   339,   344,   349,   351,   355,   360,   364,   365,   368,
+     379,   381,   386,   391,   395,   401,   407,   416,   418,   422,
+     424,   429,   435,   439,   441,   445,   447
 };
 #endif
 
@@ -1635,14 +1627,14 @@ yyreduce:
         case 3:
 
 /* Line 1806 of yacc.c  */
-#line 145 "ldscript.y"
+#line 137 "ldscript.y"
     { add_versions ((yyvsp[(2) - (2)].version)); }
     break;
 
   case 6:
 
 /* Line 1806 of yacc.c  */
-#line 153 "ldscript.y"
+#line 145 "ldscript.y"
     {
 		      if (likely (ld_state.entry == NULL))
 			ld_state.entry = (yyvsp[(3) - (5)].str);
@@ -1652,7 +1644,7 @@ yyreduce:
   case 7:
 
 /* Line 1806 of yacc.c  */
-#line 158 "ldscript.y"
+#line 150 "ldscript.y"
     {
 		      ld_new_searchdir ((yyvsp[(3) - (5)].str));
 		    }
@@ -1661,7 +1653,7 @@ yyreduce:
   case 8:
 
 /* Line 1806 of yacc.c  */
-#line 162 "ldscript.y"
+#line 154 "ldscript.y"
     {
 		      if (likely (ld_state.pagesize == 0))
 			ld_state.pagesize = (yyvsp[(3) - (5)].num);
@@ -1671,7 +1663,7 @@ yyreduce:
   case 9:
 
 /* Line 1806 of yacc.c  */
-#line 167 "ldscript.y"
+#line 159 "ldscript.y"
     {
 		      if (likely (ld_state.interp == NULL)
 			  && ld_state.file_type != dso_file_type)
@@ -1682,7 +1674,7 @@ yyreduce:
   case 10:
 
 /* Line 1806 of yacc.c  */
-#line 173 "ldscript.y"
+#line 165 "ldscript.y"
     {
 		      new_segment ((yyvsp[(2) - (5)].num), (yyvsp[(4) - (5)].output_rule));
 		    }
@@ -1691,7 +1683,7 @@ yyreduce:
   case 11:
 
 /* Line 1806 of yacc.c  */
-#line 177 "ldscript.y"
+#line 169 "ldscript.y"
     {
 		      fputs_unlocked (gettext ("mode for segment invalid\n"),
 				      stderr);
@@ -1702,7 +1694,7 @@ yyreduce:
   case 12:
 
 /* Line 1806 of yacc.c  */
-#line 183 "ldscript.y"
+#line 175 "ldscript.y"
     {
 		      /* First little optimization.  If there is only one
 			 file in the group don't do anything.  */
@@ -1718,35 +1710,35 @@ yyreduce:
   case 13:
 
 /* Line 1806 of yacc.c  */
-#line 194 "ldscript.y"
+#line 186 "ldscript.y"
     { add_inputfiles ((yyvsp[(3) - (4)].filename_list)); }
     break;
 
   case 14:
 
 /* Line 1806 of yacc.c  */
-#line 196 "ldscript.y"
+#line 188 "ldscript.y"
     { add_inputfiles (mark_as_needed ((yyvsp[(3) - (4)].filename_list))); }
     break;
 
   case 15:
 
 /* Line 1806 of yacc.c  */
-#line 198 "ldscript.y"
+#line 190 "ldscript.y"
     { add_versions ((yyvsp[(3) - (4)].version)); }
     break;
 
   case 16:
 
 /* Line 1806 of yacc.c  */
-#line 200 "ldscript.y"
+#line 192 "ldscript.y"
     { /* XXX TODO */ }
     break;
 
   case 17:
 
 /* Line 1806 of yacc.c  */
-#line 204 "ldscript.y"
+#line 196 "ldscript.y"
     {
 		      (yyvsp[(2) - (2)].output_rule)->next = (yyvsp[(1) - (2)].output_rule)->next;
 		      (yyval.output_rule) = (yyvsp[(1) - (2)].output_rule)->next = (yyvsp[(2) - (2)].output_rule);
@@ -1756,14 +1748,14 @@ yyreduce:
   case 18:
 
 /* Line 1806 of yacc.c  */
-#line 209 "ldscript.y"
+#line 201 "ldscript.y"
     { (yyval.output_rule) = (yyvsp[(1) - (1)].output_rule); }
     break;
 
   case 19:
 
 /* Line 1806 of yacc.c  */
-#line 213 "ldscript.y"
+#line 205 "ldscript.y"
     {
 		      (yyval.output_rule) = new_output_rule (output_assignment);
 		      (yyval.output_rule)->val.assignment = (yyvsp[(1) - (2)].assignment);
@@ -1773,7 +1765,7 @@ yyreduce:
   case 20:
 
 /* Line 1806 of yacc.c  */
-#line 218 "ldscript.y"
+#line 210 "ldscript.y"
     {
 		      (yyval.output_rule) = new_output_rule (output_section);
 		      (yyval.output_rule)->val.section.name = (yyvsp[(1) - (4)].str);
@@ -1790,7 +1782,7 @@ yyreduce:
   case 21:
 
 /* Line 1806 of yacc.c  */
-#line 230 "ldscript.y"
+#line 222 "ldscript.y"
     {
 		      /* This is a short cut for "ID { *(ID) }".  */
 		      (yyval.output_rule) = new_output_rule (output_section);
@@ -1817,21 +1809,21 @@ yyreduce:
   case 22:
 
 /* Line 1806 of yacc.c  */
-#line 254 "ldscript.y"
+#line 246 "ldscript.y"
     { (yyval.assignment) = new_assignment ((yyvsp[(1) - (3)].str), (yyvsp[(3) - (3)].expr), false); }
     break;
 
   case 23:
 
 /* Line 1806 of yacc.c  */
-#line 256 "ldscript.y"
+#line 248 "ldscript.y"
     { (yyval.assignment) = new_assignment ((yyvsp[(3) - (6)].str), (yyvsp[(5) - (6)].expr), true); }
     break;
 
   case 24:
 
 /* Line 1806 of yacc.c  */
-#line 260 "ldscript.y"
+#line 252 "ldscript.y"
     {
 		      (yyvsp[(2) - (2)].input_rule)->next = (yyvsp[(1) - (2)].input_rule)->next;
 		      (yyval.input_rule) = (yyvsp[(1) - (2)].input_rule)->next = (yyvsp[(2) - (2)].input_rule);
@@ -1841,14 +1833,14 @@ yyreduce:
   case 25:
 
 /* Line 1806 of yacc.c  */
-#line 265 "ldscript.y"
+#line 257 "ldscript.y"
     { (yyval.input_rule) = (yyvsp[(1) - (1)].input_rule); }
     break;
 
   case 26:
 
 /* Line 1806 of yacc.c  */
-#line 269 "ldscript.y"
+#line 261 "ldscript.y"
     {
 		      (yyval.input_rule) = new_input_rule (input_section);
 		      (yyval.input_rule)->val.section = (yyvsp[(1) - (1)].filemask_section_name);
@@ -1858,7 +1850,7 @@ yyreduce:
   case 27:
 
 /* Line 1806 of yacc.c  */
-#line 274 "ldscript.y"
+#line 266 "ldscript.y"
     {
 		      (yyvsp[(3) - (4)].filemask_section_name)->keep_flag = true;
 
@@ -1870,7 +1862,7 @@ yyreduce:
   case 28:
 
 /* Line 1806 of yacc.c  */
-#line 281 "ldscript.y"
+#line 273 "ldscript.y"
     {
 		      (yyval.input_rule) = new_input_rule (input_assignment);
 		      (yyval.input_rule)->val.assignment = (yyvsp[(1) - (2)].assignment);
@@ -1880,7 +1872,7 @@ yyreduce:
   case 29:
 
 /* Line 1806 of yacc.c  */
-#line 288 "ldscript.y"
+#line 280 "ldscript.y"
     {
 		      (yyval.filemask_section_name) = (struct filemask_section_name *)
 			obstack_alloc (&ld_state.smem, sizeof (*(yyval.filemask_section_name)));
@@ -1894,35 +1886,35 @@ yyreduce:
   case 30:
 
 /* Line 1806 of yacc.c  */
-#line 299 "ldscript.y"
+#line 291 "ldscript.y"
     { (yyval.sectionname) = new_input_section_name ((yyvsp[(1) - (1)].str), false); }
     break;
 
   case 31:
 
 /* Line 1806 of yacc.c  */
-#line 301 "ldscript.y"
+#line 293 "ldscript.y"
     { (yyval.sectionname) = new_input_section_name ((yyvsp[(3) - (4)].str), true); }
     break;
 
   case 32:
 
 /* Line 1806 of yacc.c  */
-#line 305 "ldscript.y"
+#line 297 "ldscript.y"
     { (yyval.str) = (yyvsp[(3) - (4)].str); }
     break;
 
   case 33:
 
 /* Line 1806 of yacc.c  */
-#line 307 "ldscript.y"
+#line 299 "ldscript.y"
     { (yyval.str) = NULL; }
     break;
 
   case 34:
 
 /* Line 1806 of yacc.c  */
-#line 311 "ldscript.y"
+#line 303 "ldscript.y"
     {
 		      (yyval.expr) = new_expr (exp_align);
 		      (yyval.expr)->val.child = (yyvsp[(3) - (4)].expr);
@@ -1932,14 +1924,14 @@ yyreduce:
   case 35:
 
 /* Line 1806 of yacc.c  */
-#line 316 "ldscript.y"
+#line 308 "ldscript.y"
     { (yyval.expr) = (yyvsp[(2) - (3)].expr); }
     break;
 
   case 36:
 
 /* Line 1806 of yacc.c  */
-#line 318 "ldscript.y"
+#line 310 "ldscript.y"
     {
 		      (yyval.expr) = new_expr (exp_mult);
 		      (yyval.expr)->val.binary.left = (yyvsp[(1) - (3)].expr);
@@ -1950,7 +1942,7 @@ yyreduce:
   case 37:
 
 /* Line 1806 of yacc.c  */
-#line 324 "ldscript.y"
+#line 316 "ldscript.y"
     {
 		      (yyval.expr) = new_expr ((yyvsp[(2) - (3)].op));
 		      (yyval.expr)->val.binary.left = (yyvsp[(1) - (3)].expr);
@@ -1961,7 +1953,7 @@ yyreduce:
   case 38:
 
 /* Line 1806 of yacc.c  */
-#line 330 "ldscript.y"
+#line 322 "ldscript.y"
     {
 		      (yyval.expr) = new_expr ((yyvsp[(2) - (3)].op));
 		      (yyval.expr)->val.binary.left = (yyvsp[(1) - (3)].expr);
@@ -1972,7 +1964,7 @@ yyreduce:
   case 39:
 
 /* Line 1806 of yacc.c  */
-#line 336 "ldscript.y"
+#line 328 "ldscript.y"
     {
 		      (yyval.expr) = new_expr (exp_and);
 		      (yyval.expr)->val.binary.left = (yyvsp[(1) - (3)].expr);
@@ -1983,7 +1975,7 @@ yyreduce:
   case 40:
 
 /* Line 1806 of yacc.c  */
-#line 342 "ldscript.y"
+#line 334 "ldscript.y"
     {
 		      (yyval.expr) = new_expr (exp_or);
 		      (yyval.expr)->val.binary.left = (yyvsp[(1) - (3)].expr);
@@ -1994,7 +1986,7 @@ yyreduce:
   case 41:
 
 /* Line 1806 of yacc.c  */
-#line 348 "ldscript.y"
+#line 340 "ldscript.y"
     {
 		      (yyval.expr) = new_expr (exp_num);
 		      (yyval.expr)->val.num = (yyvsp[(1) - (1)].num);
@@ -2004,7 +1996,7 @@ yyreduce:
   case 42:
 
 /* Line 1806 of yacc.c  */
-#line 353 "ldscript.y"
+#line 345 "ldscript.y"
     {
 		      (yyval.expr) = new_expr (exp_id);
 		      (yyval.expr)->val.str = (yyvsp[(1) - (1)].str);
@@ -2014,21 +2006,21 @@ yyreduce:
   case 43:
 
 /* Line 1806 of yacc.c  */
-#line 358 "ldscript.y"
+#line 350 "ldscript.y"
     { (yyval.expr) = new_expr (exp_sizeof_headers); }
     break;
 
   case 44:
 
 /* Line 1806 of yacc.c  */
-#line 360 "ldscript.y"
+#line 352 "ldscript.y"
     { (yyval.expr) = new_expr (exp_pagesize); }
     break;
 
   case 45:
 
 /* Line 1806 of yacc.c  */
-#line 364 "ldscript.y"
+#line 356 "ldscript.y"
     {
 		      (yyvsp[(3) - (3)].filename_list)->next = (yyvsp[(1) - (3)].filename_list)->next;
 		      (yyval.filename_list) = (yyvsp[(1) - (3)].filename_list)->next = (yyvsp[(3) - (3)].filename_list);
@@ -2038,14 +2030,14 @@ yyreduce:
   case 46:
 
 /* Line 1806 of yacc.c  */
-#line 369 "ldscript.y"
+#line 361 "ldscript.y"
     { (yyval.filename_list) = (yyvsp[(1) - (1)].filename_list); }
     break;
 
   case 49:
 
 /* Line 1806 of yacc.c  */
-#line 377 "ldscript.y"
+#line 369 "ldscript.y"
     {
 		      /* First little optimization.  If there is only one
 			 file in the group don't do anything.  */
@@ -2061,21 +2053,21 @@ yyreduce:
   case 50:
 
 /* Line 1806 of yacc.c  */
-#line 388 "ldscript.y"
+#line 380 "ldscript.y"
     { (yyval.filename_list) = mark_as_needed ((yyvsp[(3) - (4)].filename_list)); }
     break;
 
   case 51:
 
 /* Line 1806 of yacc.c  */
-#line 390 "ldscript.y"
+#line 382 "ldscript.y"
     { (yyval.filename_list) = new_filename_listelem ((yyvsp[(1) - (1)].str)); }
     break;
 
   case 52:
 
 /* Line 1806 of yacc.c  */
-#line 395 "ldscript.y"
+#line 387 "ldscript.y"
     {
 		      (yyvsp[(2) - (2)].version)->next = (yyvsp[(1) - (2)].version)->next;
 		      (yyval.version) = (yyvsp[(1) - (2)].version)->next = (yyvsp[(2) - (2)].version);
@@ -2085,14 +2077,14 @@ yyreduce:
   case 53:
 
 /* Line 1806 of yacc.c  */
-#line 400 "ldscript.y"
+#line 392 "ldscript.y"
     { (yyval.version) = (yyvsp[(1) - (1)].version); }
     break;
 
   case 54:
 
 /* Line 1806 of yacc.c  */
-#line 404 "ldscript.y"
+#line 396 "ldscript.y"
     {
 		      (yyvsp[(2) - (4)].version)->versionname = "";
 		      (yyvsp[(2) - (4)].version)->parentname = NULL;
@@ -2103,7 +2095,7 @@ yyreduce:
   case 55:
 
 /* Line 1806 of yacc.c  */
-#line 410 "ldscript.y"
+#line 402 "ldscript.y"
     {
 		      (yyvsp[(3) - (5)].version)->versionname = (yyvsp[(1) - (5)].str);
 		      (yyvsp[(3) - (5)].version)->parentname = NULL;
@@ -2114,7 +2106,7 @@ yyreduce:
   case 56:
 
 /* Line 1806 of yacc.c  */
-#line 416 "ldscript.y"
+#line 408 "ldscript.y"
     {
 		      (yyvsp[(3) - (6)].version)->versionname = (yyvsp[(1) - (6)].str);
 		      (yyvsp[(3) - (6)].version)->parentname = (yyvsp[(5) - (6)].str);
@@ -2125,35 +2117,35 @@ yyreduce:
   case 57:
 
 /* Line 1806 of yacc.c  */
-#line 425 "ldscript.y"
+#line 417 "ldscript.y"
     { (yyval.version) = merge_versions ((yyvsp[(1) - (2)].version), (yyvsp[(2) - (2)].version)); }
     break;
 
   case 58:
 
 /* Line 1806 of yacc.c  */
-#line 427 "ldscript.y"
+#line 419 "ldscript.y"
     { (yyval.version) = (yyvsp[(1) - (1)].version); }
     break;
 
   case 59:
 
 /* Line 1806 of yacc.c  */
-#line 431 "ldscript.y"
+#line 423 "ldscript.y"
     { (yyval.version) = new_version (NULL, (yyvsp[(2) - (2)].id_list)); }
     break;
 
   case 60:
 
 /* Line 1806 of yacc.c  */
-#line 433 "ldscript.y"
+#line 425 "ldscript.y"
     { (yyval.version) = new_version ((yyvsp[(2) - (2)].id_list), NULL); }
     break;
 
   case 61:
 
 /* Line 1806 of yacc.c  */
-#line 438 "ldscript.y"
+#line 430 "ldscript.y"
     {
 		      struct id_list *newp = new_id_listelem ((yyvsp[(2) - (3)].str));
 		      newp->next = (yyvsp[(1) - (3)].id_list)->next;
@@ -2164,42 +2156,42 @@ yyreduce:
   case 62:
 
 /* Line 1806 of yacc.c  */
-#line 444 "ldscript.y"
+#line 436 "ldscript.y"
     { (yyval.id_list) = new_id_listelem ((yyvsp[(1) - (2)].str)); }
     break;
 
   case 63:
 
 /* Line 1806 of yacc.c  */
-#line 448 "ldscript.y"
+#line 440 "ldscript.y"
     { (yyval.str) = (yyvsp[(1) - (1)].str); }
     break;
 
   case 64:
 
 /* Line 1806 of yacc.c  */
-#line 450 "ldscript.y"
+#line 442 "ldscript.y"
     { (yyval.str) = (yyvsp[(1) - (1)].str); }
     break;
 
   case 65:
 
 /* Line 1806 of yacc.c  */
-#line 454 "ldscript.y"
+#line 446 "ldscript.y"
     { (yyval.str) = (yyvsp[(1) - (1)].str); }
     break;
 
   case 66:
 
 /* Line 1806 of yacc.c  */
-#line 456 "ldscript.y"
+#line 448 "ldscript.y"
     { (yyval.str) = NULL; }
     break;
 
 
 
 /* Line 1806 of yacc.c  */
-#line 2203 "ldscript.c"
+#line 2195 "ldscript.c"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2430,7 +2422,7 @@ yyreturn:
 
 
 /* Line 2067 of yacc.c  */
-#line 459 "ldscript.y"
+#line 451 "ldscript.y"
 
 
 static void

@@ -1075,29 +1075,21 @@ char *ldtext;
 #line 1 "ldlex.l"
 #line 2 "ldlex.l"
 /* Copyright (C) 2001, 2002, 2003, 2004, 2005, 2008 Red Hat, Inc.
-   This file is part of Red Hat elfutils.
+   This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2001.
 
-   Red Hat elfutils is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by the
-   Free Software Foundation; version 2 of the License.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of the GNU General Public License as published by
+   the Free Software Foundation; either version 3 of the License, or
+   (at your option) any later version.
 
-   Red Hat elfutils is distributed in the hope that it will be useful, but
+   elfutils is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-   General Public License for more details.
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with Red Hat elfutils; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301 USA.
-
-   Red Hat elfutils is an included package of the Open Invention Network.
-   An included package of the Open Invention Network is a package for which
-   Open Invention Network licensees cross-license their patents.  No patent
-   license is granted, either expressly or impliedly, by designation as an
-   included package.  Should you wish to participate in the Open Invention
-   Network licensing program, please visit www.openinventionnetwork.com
-   <http://www.openinventionnetwork.com>.  */
+   You should have received a copy of the GNU General Public License
+   along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -1153,7 +1145,7 @@ static int pop_state (void);
 static int handle_ifdef (void);
 static void invalid_char (int ch);
 
-#line 1157 "ldlex.c"
+#line 1149 "ldlex.c"
 
 #define INITIAL 0
 #define IGNORE 1
@@ -1339,7 +1331,7 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 96 "ldlex.l"
+#line 88 "ldlex.l"
 
 				if (unlikely (ld_scan_version_script))
 				  {
@@ -1347,7 +1339,7 @@ YY_DECL
 				    return kVERSION_SCRIPT;
 				  }
 
-#line 1351 "ldlex.c"
+#line 1343 "ldlex.c"
 
 	if ( !(yy_init) )
 		{
@@ -1443,7 +1435,7 @@ case 1:
 (yy_c_buf_p) = yy_cp = yy_bp + 6;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 103 "ldlex.l"
+#line 95 "ldlex.l"
 { BEGIN (handle_ifdef ()); }
 	YY_BREAK
 case 2:
@@ -1452,7 +1444,7 @@ case 2:
 (yy_c_buf_p) = yy_cp = yy_bp + 5;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 104 "ldlex.l"
+#line 96 "ldlex.l"
 { eat_to_eol (true);
 				  push_state (skip_to_endif);
 				  BEGIN (IGNORE); }
@@ -1463,7 +1455,7 @@ case 3:
 (yy_c_buf_p) = yy_cp = yy_bp + 8;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 107 "ldlex.l"
+#line 99 "ldlex.l"
 { eat_to_eol (false);
 				  push_state (skip_to_endif);
 				  BEGIN (IGNORE); }
@@ -1474,7 +1466,7 @@ case 4:
 (yy_c_buf_p) = yy_cp = yy_bp + 6;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 110 "ldlex.l"
+#line 102 "ldlex.l"
 { eat_to_eol (true) ; }
 	YY_BREAK
 case 5:
@@ -1483,7 +1475,7 @@ case 5:
 (yy_c_buf_p) = yy_cp = yy_bp + 6;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 112 "ldlex.l"
+#line 104 "ldlex.l"
 { eat_to_eol (false);
 				  push_state (skip_to_endif); }
 	YY_BREAK
@@ -1493,7 +1485,7 @@ case 6:
 (yy_c_buf_p) = yy_cp = yy_bp + 5;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 114 "ldlex.l"
+#line 106 "ldlex.l"
 { eat_to_eol (true);
 				  assert (prepdepth > 0);
 				  if (prepstate[prepdepth - 1] == skip_if)
@@ -1510,7 +1502,7 @@ case 7:
 (yy_c_buf_p) = yy_cp = yy_bp + 8;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 123 "ldlex.l"
+#line 115 "ldlex.l"
 { assert (prepdepth > 0);
 				  if (prepstate[prepdepth - 1] == skip_if)
 				    {
@@ -1526,114 +1518,114 @@ case 8:
 (yy_c_buf_p) = yy_cp = yy_bp + 6;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 131 "ldlex.l"
+#line 123 "ldlex.l"
 { eat_to_eol (true);
 				  BEGIN (pop_state ()); }
 	YY_BREAK
 case 9:
 /* rule 9 can match eol */
 YY_RULE_SETUP
-#line 133 "ldlex.l"
+#line 125 "ldlex.l"
 { /* nothing */ }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 136 "ldlex.l"
+#line 128 "ldlex.l"
 { eat_comment (); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 138 "ldlex.l"
+#line 130 "ldlex.l"
 { return kALIGN; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 139 "ldlex.l"
+#line 131 "ldlex.l"
 { return kAS_NEEDED; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 140 "ldlex.l"
+#line 132 "ldlex.l"
 { return kENTRY; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 141 "ldlex.l"
+#line 133 "ldlex.l"
 { return kEXCLUDE_FILE; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 142 "ldlex.l"
+#line 134 "ldlex.l"
 { return kGLOBAL; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 143 "ldlex.l"
+#line 135 "ldlex.l"
 { return kGROUP; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 144 "ldlex.l"
+#line 136 "ldlex.l"
 { return kINPUT; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 145 "ldlex.l"
+#line 137 "ldlex.l"
 { return kINTERP; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 146 "ldlex.l"
+#line 138 "ldlex.l"
 { return kKEEP; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 147 "ldlex.l"
+#line 139 "ldlex.l"
 { return kLOCAL; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 148 "ldlex.l"
+#line 140 "ldlex.l"
 { return kOUTPUT_FORMAT; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 149 "ldlex.l"
+#line 141 "ldlex.l"
 { return kPAGESIZE; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 150 "ldlex.l"
+#line 142 "ldlex.l"
 { return kPROVIDE; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 151 "ldlex.l"
+#line 143 "ldlex.l"
 { return kSEARCH_DIR; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 152 "ldlex.l"
+#line 144 "ldlex.l"
 { return kSEGMENT; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 153 "ldlex.l"
+#line 145 "ldlex.l"
 { return kSIZEOF_HEADERS; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 154 "ldlex.l"
+#line 146 "ldlex.l"
 { return kSORT; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 155 "ldlex.l"
+#line 147 "ldlex.l"
 { return kVERSION; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 157 "ldlex.l"
+#line 149 "ldlex.l"
 { int cnt = 1 ;
 				  ldlval.num = 0;
 				  while (cnt < ldleng - 1)
@@ -1642,82 +1634,82 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 163 "ldlex.l"
+#line 155 "ldlex.l"
 { return '{'; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 164 "ldlex.l"
+#line 156 "ldlex.l"
 { return '}'; }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 165 "ldlex.l"
+#line 157 "ldlex.l"
 { return '('; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 166 "ldlex.l"
+#line 158 "ldlex.l"
 { return ')'; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 167 "ldlex.l"
+#line 159 "ldlex.l"
 { return ':'; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 168 "ldlex.l"
+#line 160 "ldlex.l"
 { return ';'; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 169 "ldlex.l"
+#line 161 "ldlex.l"
 { return '='; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 170 "ldlex.l"
+#line 162 "ldlex.l"
 { ldlval.op = exp_plus; return kADD_OP; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 171 "ldlex.l"
+#line 163 "ldlex.l"
 { ldlval.op = exp_minus; return kADD_OP; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 172 "ldlex.l"
+#line 164 "ldlex.l"
 { return '*'; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 173 "ldlex.l"
+#line 165 "ldlex.l"
 { ldlval.op = exp_div; return kMUL_OP; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 174 "ldlex.l"
+#line 166 "ldlex.l"
 { ldlval.op = exp_mod; return kMUL_OP; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 175 "ldlex.l"
+#line 167 "ldlex.l"
 { return '&'; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 176 "ldlex.l"
+#line 168 "ldlex.l"
 { return '|'; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 178 "ldlex.l"
+#line 170 "ldlex.l"
 { return ','; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 180 "ldlex.l"
+#line 172 "ldlex.l"
 { char *endp;
 				  ldlval.num = strtoumax (ldtext, &endp, 0);
 				  if (*endp != '\0')
@@ -1734,14 +1726,14 @@ YY_RULE_SETUP
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 194 "ldlex.l"
+#line 186 "ldlex.l"
 { ldlval.str = obstack_strndup (&ld_state.smem,
 								ldtext, ldleng);
 				  return kID; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 198 "ldlex.l"
+#line 190 "ldlex.l"
 { ldlval.str = obstack_strndup (&ld_state.smem,
 								ldtext, ldleng);
 				  return kFILENAME; }
@@ -1749,20 +1741,20 @@ YY_RULE_SETUP
 case 48:
 /* rule 48 can match eol */
 YY_RULE_SETUP
-#line 202 "ldlex.l"
+#line 194 "ldlex.l"
 { /* IGNORE */ }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 204 "ldlex.l"
+#line 196 "ldlex.l"
 { invalid_char (*ldtext); }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 206 "ldlex.l"
+#line 198 "ldlex.l"
 ECHO;
 	YY_BREAK
-#line 1766 "ldlex.c"
+#line 1758 "ldlex.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(IGNORE):
 	yyterminate();
@@ -2772,7 +2764,7 @@ void ldfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 206 "ldlex.l"
+#line 198 "ldlex.l"
 
 
 

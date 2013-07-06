@@ -103,7 +103,7 @@ typedef union YYSTYPE
 {
 
 /* Line 2068 of yacc.c  */
-#line 71 "ldscript.y"
+#line 63 "ldscript.y"
 
   uintmax_t num;
   enum expression_tag op;

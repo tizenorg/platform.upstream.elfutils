@@ -80,26 +80,29 @@
    Copyright (C) 2004, 2005, 2007, 2008, 2009 Red Hat, Inc.
    Written by Ulrich Drepper <drepper@redhat.com>, 2004.
 
-   Red Hat elfutils is free software; you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by the
-   Free Software Foundation; version 2 of the License.
+   This file is free software; you can redistribute it and/or modify
+   it under the terms of either
 
-   Red Hat elfutils is distributed in the hope that it will be useful, but
+     * the GNU Lesser General Public License as published by the Free
+       Software Foundation; either version 3 of the License, or (at
+       your option) any later version
+
+   or
+
+     * the GNU General Public License as published by the Free
+       Software Foundation; either version 2 of the License, or (at
+       your option) any later version
+
+   or both in parallel, as here.
+
+   elfutils is distributed in the hope that it will be useful, but
    WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
    General Public License for more details.
 
-   You should have received a copy of the GNU General Public License along
-   with Red Hat elfutils; if not, write to the Free Software Foundation,
-   Inc., 51 Franklin Street, Fifth Floor, Boston MA 02110-1301 USA.
-
-   Red Hat elfutils is an included package of the Open Invention Network.
-   An included package of the Open Invention Network is a package for which
-   Open Invention Network licensees cross-license their patents.  No patent
-   license is granted, either expressly or impliedly, by designation as an
-   included package.  Should you wish to participate in the Open Invention
-   Network licensing program, please visit www.openinventionnetwork.com
-   <http://www.openinventionnetwork.com>.  */
+   You should have received copies of the GNU General Public License and
+   the GNU Lesser General Public License along with this program.  If
+   not, see <http://www.gnu.org/licenses/>.  */
 
 #ifdef HAVE_CONFIG_H
 # include <config.h>
@@ -289,7 +292,7 @@ static size_t best_mnemonic_bits;
 
 
 /* Line 268 of yacc.c  */
-#line 293 "i386_parse.c"
+#line 296 "i386_parse.c"
 
 /* Enabling traces.  */
 #ifndef YYDEBUG
@@ -348,7 +351,7 @@ typedef union YYSTYPE
 {
 
 /* Line 293 of yacc.c  */
-#line 214 "i386_parse.y"
+#line 217 "i386_parse.y"
 
   unsigned long int num;
   char *str;
@@ -361,7 +364,7 @@ typedef union YYSTYPE
 
 
 /* Line 293 of yacc.c  */
-#line 365 "i386_parse.c"
+#line 368 "i386_parse.c"
 } YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
 # define yystype YYSTYPE /* obsolescent; will be withdrawn */
@@ -373,7 +376,7 @@ typedef union YYSTYPE
 
 
 /* Line 343 of yacc.c  */
-#line 377 "i386_parse.c"
+#line 380 "i386_parse.c"
 
 #ifdef short
 # undef short
@@ -670,10 +673,10 @@ static const yytype_int8 yyrhs[] =
 /* YYRLINE[YYN] -- source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   244,   244,   254,   255,   258,   260,   262,   264,   276,
-     279,   280,   283,   366,   369,   385,   388,   398,   405,   413,
-     417,   424,   431,   453,   456,   459,   469,   477,   485,   488,
-     520,   529,   536
+       0,   247,   247,   257,   258,   261,   263,   265,   267,   279,
+     282,   283,   286,   369,   372,   388,   391,   401,   408,   416,
+     420,   427,   434,   456,   459,   462,   472,   480,   488,   491,
+     523,   532,   539
 };
 #endif
 
@@ -1627,7 +1630,7 @@ yyreduce:
         case 2:
 
 /* Line 1806 of yacc.c  */
-#line 245 "i386_parse.y"
+#line 248 "i386_parse.y"
     {
 		      if (error_message_count != 0)
 			error (EXIT_FAILURE, 0,
@@ -1640,28 +1643,28 @@ yyreduce:
   case 5:
 
 /* Line 1806 of yacc.c  */
-#line 259 "i386_parse.y"
+#line 262 "i386_parse.y"
     { new_bitfield ((yyvsp[(2) - (3)].str), (yyvsp[(3) - (3)].num)); }
     break;
 
   case 6:
 
 /* Line 1806 of yacc.c  */
-#line 261 "i386_parse.y"
+#line 264 "i386_parse.y"
     { new_bitfield ((yyvsp[(2) - (2)].str), -1); }
     break;
 
   case 7:
 
 /* Line 1806 of yacc.c  */
-#line 263 "i386_parse.y"
+#line 266 "i386_parse.y"
     { new_bitfield ((yyvsp[(2) - (2)].str), -2); }
     break;
 
   case 8:
 
 /* Line 1806 of yacc.c  */
-#line 265 "i386_parse.y"
+#line 268 "i386_parse.y"
     {
 		      struct synonym *newp = xmalloc (sizeof (*newp));
 		      newp->from = (yyvsp[(2) - (3)].str);
@@ -1678,7 +1681,7 @@ yyreduce:
   case 12:
 
 /* Line 1806 of yacc.c  */
-#line 284 "i386_parse.y"
+#line 287 "i386_parse.y"
     {
 		      if ((yyvsp[(3) - (6)].field) != NULL && strcmp ((yyvsp[(3) - (6)].field)->name, "RE") != 0
 			  && strcmp ((yyvsp[(3) - (6)].field)->name, "R") != 0)
@@ -1766,7 +1769,7 @@ yyreduce:
   case 14:
 
 /* Line 1806 of yacc.c  */
-#line 370 "i386_parse.y"
+#line 373 "i386_parse.y"
     {
 		      struct known_bitfield search;
 		      search.name = (yyvsp[(1) - (1)].str);
@@ -1786,14 +1789,14 @@ yyreduce:
   case 15:
 
 /* Line 1806 of yacc.c  */
-#line 385 "i386_parse.y"
+#line 388 "i386_parse.y"
     { (yyval.field) = NULL; }
     break;
 
   case 16:
 
 /* Line 1806 of yacc.c  */
-#line 389 "i386_parse.y"
+#line 392 "i386_parse.y"
     {
 		      check_bits ((yyvsp[(3) - (3)].bit));
 
@@ -1808,7 +1811,7 @@ yyreduce:
   case 17:
 
 /* Line 1806 of yacc.c  */
-#line 399 "i386_parse.y"
+#line 402 "i386_parse.y"
     {
 		      check_bits ((yyvsp[(1) - (1)].bit));
 		      (yyval.bit) = (yyvsp[(1) - (1)].bit);
@@ -1818,7 +1821,7 @@ yyreduce:
   case 18:
 
 /* Line 1806 of yacc.c  */
-#line 406 "i386_parse.y"
+#line 409 "i386_parse.y"
     {
 		      struct bitvalue *runp = (yyvsp[(1) - (2)].bit);
 		      while (runp->next != NULL)
@@ -1831,14 +1834,14 @@ yyreduce:
   case 19:
 
 /* Line 1806 of yacc.c  */
-#line 414 "i386_parse.y"
+#line 417 "i386_parse.y"
     { (yyval.bit) = (yyvsp[(1) - (1)].bit); }
     break;
 
   case 20:
 
 /* Line 1806 of yacc.c  */
-#line 418 "i386_parse.y"
+#line 421 "i386_parse.y"
     {
 		      (yyval.bit) = xmalloc (sizeof (struct bitvalue));
 		      (yyval.bit)->type = zeroone;
@@ -1850,7 +1853,7 @@ yyreduce:
   case 21:
 
 /* Line 1806 of yacc.c  */
-#line 425 "i386_parse.y"
+#line 428 "i386_parse.y"
     {
 		      (yyval.bit) = xmalloc (sizeof (struct bitvalue));
 		      (yyval.bit)->type = zeroone;
@@ -1862,7 +1865,7 @@ yyreduce:
   case 22:
 
 /* Line 1806 of yacc.c  */
-#line 432 "i386_parse.y"
+#line 435 "i386_parse.y"
     {
 		      (yyval.bit) = xmalloc (sizeof (struct bitvalue));
 		      struct known_bitfield search;
@@ -1887,21 +1890,21 @@ yyreduce:
   case 23:
 
 /* Line 1806 of yacc.c  */
-#line 454 "i386_parse.y"
+#line 457 "i386_parse.y"
     { (yyval.arg) = (yyvsp[(2) - (2)].arg); }
     break;
 
   case 24:
 
 /* Line 1806 of yacc.c  */
-#line 456 "i386_parse.y"
+#line 459 "i386_parse.y"
     { (yyval.arg) = NULL; }
     break;
 
   case 25:
 
 /* Line 1806 of yacc.c  */
-#line 460 "i386_parse.y"
+#line 463 "i386_parse.y"
     {
 		      struct argument *runp = (yyvsp[(1) - (3)].arg);
 		      while (runp->next != NULL)
@@ -1916,7 +1919,7 @@ yyreduce:
   case 26:
 
 /* Line 1806 of yacc.c  */
-#line 470 "i386_parse.y"
+#line 473 "i386_parse.y"
     {
 		      (yyval.arg) = xmalloc (sizeof (struct argument));
 		      (yyval.arg)->name = combine ((yyvsp[(1) - (1)].name));
@@ -1927,7 +1930,7 @@ yyreduce:
   case 27:
 
 /* Line 1806 of yacc.c  */
-#line 478 "i386_parse.y"
+#line 481 "i386_parse.y"
     {
 		      struct argname *runp = (yyvsp[(1) - (2)].name);
 		      while (runp->next != NULL)
@@ -1940,14 +1943,14 @@ yyreduce:
   case 28:
 
 /* Line 1806 of yacc.c  */
-#line 486 "i386_parse.y"
+#line 489 "i386_parse.y"
     { (yyval.name) = (yyvsp[(1) - (1)].name); }
     break;
 
   case 29:
 
 /* Line 1806 of yacc.c  */
-#line 489 "i386_parse.y"
+#line 492 "i386_parse.y"
     {
 		      (yyval.name) = xmalloc (sizeof (struct argname));
 		      (yyval.name)->type = nfield;
@@ -1984,7 +1987,7 @@ yyreduce:
   case 30:
 
 /* Line 1806 of yacc.c  */
-#line 521 "i386_parse.y"
+#line 524 "i386_parse.y"
     {
 		      (yyval.name) = xmalloc (sizeof (struct argname));
 		      (yyval.name)->type = string;
@@ -1998,7 +2001,7 @@ yyreduce:
   case 31:
 
 /* Line 1806 of yacc.c  */
-#line 530 "i386_parse.y"
+#line 533 "i386_parse.y"
     {
 		      (yyval.name) = xmalloc (sizeof (struct argname));
 		      (yyval.name)->type = string;
@@ -2010,7 +2013,7 @@ yyreduce:
   case 32:
 
 /* Line 1806 of yacc.c  */
-#line 537 "i386_parse.y"
+#line 540 "i386_parse.y"
     {
 		      (yyval.name) = xmalloc (sizeof (struct argname));
 		      (yyval.name)->type = string;
@@ -2024,7 +2027,7 @@ yyreduce:
 
 
 /* Line 1806 of yacc.c  */
-#line 2028 "i386_parse.c"
+#line 2031 "i386_parse.c"
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
@@ -2255,7 +2258,7 @@ yyreturn:
 
 
 /* Line 2067 of yacc.c  */
-#line 547 "i386_parse.y"
+#line 550 "i386_parse.y"
 
 
 static void
