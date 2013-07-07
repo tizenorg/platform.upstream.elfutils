@@ -1,6 +1,6 @@
 %define keepstatic 1
 Name:           elfutils
-Version:        0.153
+Version:        0.155
 Release:        0
 License:        GPL-2.0-with-osi-exception
 Summary:        Higher-level library to access ELF
@@ -122,7 +122,7 @@ to develop applications that require these.
 #TIME="\"$(date -d "${modified}" "+%%R")\""
 #find . -type f -regex ".*\.c\|.*\.cpp\|.*\.h" -exec sed -i "s/__DATE__/${DATE}/g;s/__TIME__/${TIME}/g" {} +
 autoreconf -fi
-%configure --program-prefix=eu-
+%configure --program-prefix=eu- --disable-werror
 make %{?_smp_mflags}
 
 %install
