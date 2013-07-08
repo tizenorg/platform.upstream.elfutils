@@ -1,0 +1,8 @@
+Change-Id: Ib910cdc29f3b1c4a5fa461136f88700776badfc1
+Code-Review+2: Ryan Ware <ware@linux.intel.com>
+Verified+1: Ryan Ware <ware@linux.intel.com>
+Submitted-by: Ryan Ware <ware@linux.intel.com>
+Submitted-at: Mon, 08 Jul 2013 10:23:54 -0700
+Reviewed-on: https://review.tizen.org/gerrit/4702
+Project: platform/upstream/elfutils
+Branch: refs/heads/tizen
