@@ -2,10 +2,10 @@
 Name:           elfutils
 Version:        0.155
 Release:        0
-License:        GPL-2.0-with-osi-exception
+License:        GPL-3.0+
 Summary:        Higher-level library to access ELF
 Url:            http://elfutils.fedorahosted.org
-Group:          Base/Tools
+Group:          Base/Utilities
 Source:         elfutils-%{version}.tar.bz2
 Source2:        baselibs.conf
 Source1001: 	elfutils.manifest
@@ -22,7 +22,7 @@ is a part of elfutils package.
 
 %package -n libasm
 Summary:        A collection of utilities and DSOs to handle compiled objects
-Group:          Base/Libraries
+License:        GPL-3.0+ or GPL-2.0+
 
 %description -n libasm
 Elfutils is a collection of utilities, including ld (a linker), nm (for
@@ -33,11 +33,10 @@ well-formed ELF files).  Also included are numerous helper libraries
 which implement DWARF, ELF, and machine-specific ELF handling.
 
 %package -n libasm-devel
-License:        GPL-2.0-with-osi-exception
 Summary:        A collection of utilities and DSOs to handle compiled objects
-Group:          Development/Libraries
 Requires:       glibc-devel
 Requires:       libasm = %{version}
+License:        GPL-3.0+ or GPL-2.0+
 
 %description -n libasm-devel
 Elfutils is a collection of utilities, including ld (a linker), nm (for
@@ -48,9 +47,8 @@ well-formed ELF files).  Also included are numerous helper libraries
 which implement DWARF, ELF, and machine-specific ELF handling.
 
 %package -n libebl
-License:        GPL-2.0-with-osi-exception
 Summary:        A collection of utilities and DSOs to handle compiled objects
-Group:          Base/Libraries
+License:        GPL-3.0+ or GPL-2.0+
 
 %description -n libebl
 Elfutils is a collection of utilities, including ld (a linker), nm (for
@@ -61,9 +59,8 @@ well-formed ELF files).  Also included are numerous helper libraries
 which implement DWARF, ELF, and machine-specific ELF handling.
 
 %package -n libebl-devel
-License:        GPL-2.0-with-osi-exception
 Summary:        Include Files and Libraries mandatory for Development
-Group:          Development/Libraries
+License:        GPL-3.0+ or GPL-2.0+
 Requires:       glibc-devel
 Requires:       libdw-devel = %{version}
 Requires:       libebl = %{version}
@@ -73,18 +70,16 @@ This package contains all necessary include files and libraries needed
 to develop applications that require these.
 
 %package -n libelf
-License:        GPL-2.0-with-osi-exception
 Summary:        Library to read and write ELF files
-Group:          Base/Libraries
+License:        GPL-3.0+ or GPL-2.0+
 
 %description -n libelf
 This package provides a high-level library to read and write ELF files.
 This is a part of elfutils package.
 
 %package -n libelf-devel
-License:        GPL-2.0-with-osi-exception
 Summary:        Include Files and Libraries mandatory for Development
-Group:          Development/Libraries
+License:        GPL-3.0+ or GPL-2.0+
 Requires:       glibc-devel
 Requires:       libelf = %{version}
 Conflicts:      libelf0-devel
@@ -94,18 +89,16 @@ This package contains all necessary include files and libraries needed
 to develop applications that require these.
 
 %package -n libdw
-License:        GPL-2.0-with-osi-exception
 Summary:        Library to access DWARF debugging information
-Group:          Base/Libraries
+License:        GPL-3.0+ or GPL-2.0+
 
 %description -n libdw
 This package provides a high-level library to access the DWARF debugging
 information.  This is a part of elfutils package.
 
 %package -n libdw-devel
-License:        GPL-2.0-with-osi-exception
 Summary:        Include Files and Libraries mandatory for Development
-Group:          Development/Libraries
+License:        GPL-3.0+ or GPL-2.0+
 Requires:       glibc-devel
 Requires:       libdw = %{version}
 Requires:       libelf-devel = %{version}
