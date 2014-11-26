@@ -1,5 +1,5 @@
 /* Return symbol table of archive.
-   Copyright (C) 1998-2000, 2002, 2005, 2012 Red Hat, Inc.
+   Copyright (C) 1998-2000, 2002, 2005, 2009, 2012, 2014 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 1998.
 
@@ -57,7 +57,9 @@ read_number_entries (uint64_t *nump, Elf *elf, size_t *offp, bool index64_p)
 
   size_t w = index64_p ? 8 : 4;
   if (elf->map_address != NULL)
-    u = *(union u *) (elf->map_address + *offp);
+    /* Use memcpy instead of pointer dereference so as not to assume the
+       field is naturally aligned within the file.  */
+    memcpy (&u, elf->map_address + *offp, sizeof u);
   else if ((size_t) pread_retry (elf->fildes, &u, w, *offp) != w)
     return -1;
 
@@ -181,6 +183,9 @@ elf_getarsym (elf, ptr)
       size_t index_size = atol (tmpbuf);
 
       if (SARMAG + sizeof (struct ar_hdr) + index_size > elf->maximum_size
+#if SIZE_MAX <= 4294967295U
+	  || n >= SIZE_MAX / sizeof (Elf_Arsym)
+#endif
 	  || n * w > index_size)
 	{
 	  /* This index table cannot be right since it does not fit into
@@ -238,6 +243,9 @@ elf_getarsym (elf, ptr)
 	  else
 	    {
 	      file_data = (void *) (elf->map_address + off);
+	      if (!ALLOW_UNALIGNED
+		  && ((uintptr_t) file_data & -(uintptr_t) n) != 0)
+		file_data = memcpy (alloca (sz), elf->map_address + off, sz);
 	      str_data = (char *) (elf->map_address + off + sz);
 	    }
 

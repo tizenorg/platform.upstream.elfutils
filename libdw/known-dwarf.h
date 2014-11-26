@@ -577,7 +577,6 @@
   ONE_KNOWN_DW_TAG (lexical_block, DW_TAG_lexical_block) \
   ONE_KNOWN_DW_TAG (member, DW_TAG_member) \
   ONE_KNOWN_DW_TAG (module, DW_TAG_module) \
-  ONE_KNOWN_DW_TAG (mutable_type, DW_TAG_mutable_type) \
   ONE_KNOWN_DW_TAG (namelist, DW_TAG_namelist) \
   ONE_KNOWN_DW_TAG (namelist_item, DW_TAG_namelist_item) \
   ONE_KNOWN_DW_TAG (namespace, DW_TAG_namespace) \

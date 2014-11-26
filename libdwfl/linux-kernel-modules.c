@@ -1,5 +1,5 @@
 /* Standard libdwfl callbacks for debugging the running Linux kernel.
-   Copyright (C) 2005-2011 Red Hat, Inc.
+   Copyright (C) 2005-2011, 2013, 2014 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -88,23 +88,22 @@ try_kernel_name (Dwfl *dwfl, char **fname, bool try_debug)
 
   if (fd < 0)
     {
-      char *debugfname = NULL;
       Dwfl_Module fakemod = { .dwfl = dwfl };
       /* First try the file's unadorned basename as DEBUGLINK_FILE,
 	 to look for "vmlinux" files.  */
       fd = INTUSE(dwfl_standard_find_debuginfo) (&fakemod, NULL, NULL, 0,
 						 *fname, basename (*fname), 0,
-						 &debugfname);
+						 &fakemod.debug.name);
       if (fd < 0 && try_debug)
 	/* Next, let the call use the default of basename + ".debug",
 	   to look for "vmlinux.debug" files.  */
 	fd = INTUSE(dwfl_standard_find_debuginfo) (&fakemod, NULL, NULL, 0,
 						   *fname, NULL, 0,
-						   &debugfname);
-      if (debugfname != NULL)
+						   &fakemod.debug.name);
+      if (fakemod.debug.name != NULL)
 	{
 	  free (*fname);
-	  *fname = debugfname;
+	  *fname = fakemod.debug.name;
 	}
     }
 
@@ -216,8 +215,14 @@ report_kernel (Dwfl *dwfl, const char **release,
 
       if (report)
 	{
+	  /* Note that on some architectures (e.g. x86_64) the vmlinux
+	     is ET_EXEC, while on others (e.g. ppc64) it is ET_DYN.
+	     In both cases the phdr p_vaddr load address will be non-zero.
+	     We want the image to be placed as if it was ET_DYN, so
+	     pass true for add_p_vaddr which will do the right thing
+	     (in combination with a zero base) in either case.  */
 	  Dwfl_Module *mod = INTUSE(dwfl_report_elf) (dwfl, KERNEL_MODNAME,
-						      fname, fd, 0);
+						      fname, fd, 0, true);
 	  if (mod == NULL)
 	    result = -1;
 	  else
@@ -225,11 +230,11 @@ report_kernel (Dwfl *dwfl, const char **release,
 	    mod->e_type = ET_DYN;
 	}
 
+      free (fname);
+
       if (!report || result < 0)
 	close (fd);
     }
-
-  free (fname);
 
   return result;
 }
@@ -245,9 +250,10 @@ report_kernel_archive (Dwfl *dwfl, const char **release,
     return result;
 
   char *archive;
-  if (unlikely ((*release)[0] == '/'
-		? asprintf (&archive, "%s/debug.a", *release)
-		: asprintf (&archive, MODULEDIRFMT "/debug.a", *release)) < 0)
+  int res = (((*release)[0] == '/')
+	     ? asprintf (&archive, "%s/debug.a", *release)
+	     : asprintf (&archive, MODULEDIRFMT "/debug.a", *release));
+  if (unlikely (res < 0))
     return ENOMEM;
 
   int fd = try_kernel_name (dwfl, &archive, false);
@@ -295,6 +301,9 @@ check_suffix (const FTSENT *f, size_t namelen)
 #endif
 #if USE_BZLIB
   TRY (".ko.bz2");
+#endif
+#if USE_LZMA
+  TRY (".ko.xz");
 #endif
 
   return 0;

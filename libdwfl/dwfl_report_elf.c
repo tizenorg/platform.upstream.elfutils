@@ -38,17 +38,20 @@
    rejiggering (see below).  */
 #define REL_MIN_ALIGN	((GElf_Xword) 0x100)
 
-Dwfl_Module *
+bool
 internal_function
-__libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
-		      int fd, Elf *elf, GElf_Addr base, bool sanity)
+__libdwfl_elf_address_range (Elf *elf, GElf_Addr base, bool add_p_vaddr,
+			     bool sanity, GElf_Addr *vaddrp,
+			     GElf_Addr *address_syncp, GElf_Addr *startp,
+			     GElf_Addr *endp, GElf_Addr *biasp,
+			     GElf_Half *e_typep)
 {
   GElf_Ehdr ehdr_mem, *ehdr = gelf_getehdr (elf, &ehdr_mem);
   if (ehdr == NULL)
     {
     elf_error:
       __libdwfl_seterrno (DWFL_E_LIBELF);
-      return NULL;
+      return false;
     }
 
   GElf_Addr vaddr = 0;
@@ -166,6 +169,7 @@ __libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
     case ET_CORE:
       /* An assigned base address is meaningless for these.  */
       base = 0;
+      add_p_vaddr = true;
 
     case ET_DYN:
     default:;
@@ -181,13 +185,19 @@ __libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
 	    {
 	      vaddr = ph->p_vaddr & -ph->p_align;
 	      address_sync = ph->p_vaddr + ph->p_memsz;
-	      if ((base & (ph->p_align - 1)) != 0)
-		base = (base + ph->p_align - 1) & -ph->p_align;
-	      start = base + (ph->p_vaddr & -ph->p_align);
 	      break;
 	    }
 	}
-      bias = start - vaddr;
+      if (add_p_vaddr)
+	{
+	  start = base + vaddr;
+	  bias = base;
+	}
+      else
+	{
+	  start = base;
+	  bias = base - vaddr;
+	}
 
       for (size_t i = phnum; i-- > 0;)
 	{
@@ -197,7 +207,7 @@ __libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
 	  if (ph->p_type == PT_LOAD
 	      && ph->p_vaddr + ph->p_memsz > 0)
 	    {
-	      end = base + (ph->p_vaddr + ph->p_memsz);
+	      end = bias + (ph->p_vaddr + ph->p_memsz);
 	      break;
 	    }
 	}
@@ -205,11 +215,37 @@ __libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
       if (end == 0 && sanity)
 	{
 	  __libdwfl_seterrno (DWFL_E_NO_PHDR);
-	  return NULL;
+	  return false;
 	}
       break;
     }
+  if (vaddrp)
+    *vaddrp = vaddr;
+  if (address_syncp)
+    *address_syncp = address_sync;
+  if (startp)
+    *startp = start;
+  if (endp)
+    *endp = end;
+  if (biasp)
+    *biasp = bias;
+  if (e_typep)
+    *e_typep = ehdr->e_type;
+  return true;
+}
 
+Dwfl_Module *
+internal_function
+__libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
+		      int fd, Elf *elf, GElf_Addr base, bool add_p_vaddr,
+		      bool sanity)
+{
+  GElf_Addr vaddr, address_sync, start, end, bias;
+  GElf_Half e_type;
+  if (! __libdwfl_elf_address_range (elf, base, add_p_vaddr, sanity, &vaddr,
+				     &address_sync, &start, &end, &bias,
+				     &e_type))
+    return NULL;
   Dwfl_Module *m = INTUSE(dwfl_report_module) (dwfl, name, start, end);
   if (m != NULL)
     {
@@ -234,7 +270,7 @@ __libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
 	  m->main.vaddr = vaddr;
 	  m->main.address_sync = address_sync;
 	  m->main_bias = bias;
-	  m->e_type = ehdr->e_type;
+	  m->e_type = e_type;
 	}
       else
 	{
@@ -248,8 +284,8 @@ __libdwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name,
 }
 
 Dwfl_Module *
-dwfl_report_elf (Dwfl *dwfl, const char *name,
-		 const char *file_name, int fd, GElf_Addr base)
+dwfl_report_elf (Dwfl *dwfl, const char *name, const char *file_name, int fd,
+		 GElf_Addr base, bool add_p_vaddr)
 {
   bool closefd = false;
   if (fd < 0)
@@ -272,7 +308,7 @@ dwfl_report_elf (Dwfl *dwfl, const char *name,
     }
 
   Dwfl_Module *mod = __libdwfl_report_elf (dwfl, name, file_name,
-					   fd, elf, base, true);
+					   fd, elf, base, add_p_vaddr, true);
   if (mod == NULL)
     {
       elf_end (elf);
@@ -283,3 +319,20 @@ dwfl_report_elf (Dwfl *dwfl, const char *name,
   return mod;
 }
 INTDEF (dwfl_report_elf)
+NEW_VERSION (dwfl_report_elf, ELFUTILS_0.156)
+
+#ifdef SHARED
+Dwfl_Module *
+  _compat_without_add_p_vaddr_dwfl_report_elf (Dwfl *dwfl, const char *name,
+					       const char *file_name, int fd,
+					       GElf_Addr base);
+COMPAT_VERSION_NEWPROTO (dwfl_report_elf, ELFUTILS_0.122, without_add_p_vaddr)
+
+Dwfl_Module *
+_compat_without_add_p_vaddr_dwfl_report_elf (Dwfl *dwfl, const char *name,
+					     const char *file_name, int fd,
+					     GElf_Addr base)
+{
+  return dwfl_report_elf (dwfl, name, file_name, fd, base, true);
+}
+#endif

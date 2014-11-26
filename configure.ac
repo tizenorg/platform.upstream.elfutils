@@ -1,7 +1,7 @@
 dnl Process this file with autoconf to produce a configure script.
 dnl Configure input file for elfutils.                     -*-autoconf-*-
 dnl
-dnl Copyright (C) 1996-2012 Red Hat, Inc.
+dnl Copyright (C) 1996-2014 Red Hat, Inc.
 dnl
 dnl This file is part of elfutils.
 dnl
@@ -17,16 +17,16 @@ dnl  GNU General Public License for more details.
 dnl
 dnl  You should have received a copy of the GNU General Public License
 dnl  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-AC_INIT([elfutils],[0.155],[https://bugzilla.redhat.com/],[elfutils])
+AC_INIT([elfutils],[0.160],[https://bugzilla.redhat.com/],[elfutils])
 
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_FILES([config/Makefile])
 
-AC_COPYRIGHT([Copyright (C) 1996-2012 Red Hat, Inc.])
+AC_COPYRIGHT([Copyright (C) 1996-2014 Red Hat, Inc.])
 AC_PREREQ(2.63)			dnl Minimum Autoconf version required.
 
 dnl We use GNU make extensions; automake 1.10 defaults to -Wportability.
-AM_INIT_AUTOMAKE([gnits 1.8 -Wno-portability dist-bzip2 no-dist-gzip])
+AM_INIT_AUTOMAKE([gnits 1.11 -Wno-portability dist-bzip2 no-dist-gzip parallel-tests])
 AM_MAINTAINER_MODE
 
 dnl Unique ID for this build.
@@ -60,25 +60,24 @@ AC_DEFINE_UNQUOTED(DEFAULT_AR_DETERMINISTIC, $default_ar_deterministic,
 		   [Should ar and ranlib use -D behavior by default?])
 
 AC_ARG_ENABLE([thread-safety],
-AS_HELP_STRING([--enable-thread-safety], [enable thread safety of libraries]),
-use_locks=$enableval, use_locks=no)
+AS_HELP_STRING([--enable-thread-safety],
+               [enable thread safety of libraries EXPERIMENTAL]),
+               use_locks=$enableval, use_locks=no)
 AM_CONDITIONAL(USE_LOCKS, test "$use_locks" = yes)
 AS_IF([test "$use_locks" = yes], [AC_DEFINE(USE_LOCKS)])
+AS_IF([test "$use_locks" = yes],
+      [AC_MSG_WARN([thread-safety is EXPERIMENTAL tests might fail.])])
 
 AH_TEMPLATE([USE_LOCKS], [Defined if libraries should be thread-safe.])
-
-AC_ARG_ENABLE([dwz],
-AS_HELP_STRING([--enable-dwz], [enable experimental GNU ref_alt FORM, dwz multi file support in libdw]),
-enable_dwz=$enableval, enable_dwz=no)
-AM_CONDITIONAL(ENABLE_DWZ, test "$enable_dwz" = yes)
-AS_IF([test "$enable_dwz" = yes], [AC_DEFINE(ENABLE_DWZ)])
-
-AH_TEMPLATE([ENABLE_DWZ], [Defined if libdw should support GNU ref_alt FORM, dwz multi files.])
 
 AC_PROG_CC
 AC_PROG_RANLIB
 AC_PROG_YACC
 AM_PROG_LEX
+# Only available since automake 1.12
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
+AC_CHECK_TOOL([READELF], [readelf])
+AC_CHECK_TOOL([NM], [nm])
 
 AC_CACHE_CHECK([for gcc with C99 support], ac_cv_c99, [dnl
 old_CFLAGS="$CFLAGS"
@@ -142,26 +141,6 @@ dnl Support to work around automake's inflexible dependency generation.
 dnl See src/Makefile.am for more information.
 AM_CONDITIONAL(NEVER, false)
 
-dnl Enable debugging via mudflap.  This option will cause most libraries
-dnl to be built as archives which are statically linked into the applications.
-dnl All code, as far as possible, is compiled instrumented to catch all
-dnl the bugs valgrind is able to catch.
-use_mudflap=no
-AC_ARG_ENABLE([mudflap],
-AS_HELP_STRING([--enable-mudflap],
-[build binaries with mudflap instrumentation]), [dnl
-if test "x$enable_mudflap" = xyes; then
-  # Check whether the compiler support -fmudflap.
-  old_CFLAGS="$CFLAGS"
-  CFLAGS="$CFLAGS -fmudflap"
-  AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])],[use_mudflap=yes],[use_mudflap=fail])
-  CFLAGS="$old_CFLAGS"
-fi])
-if test "$use_mudflap" = fail; then
-  AC_MSG_FAILURE([--enable-mudflap requires a compiler which understands this option])
-fi
-AM_CONDITIONAL(MUDFLAP, test "$use_mudflap" = yes)
-
 dnl enable debugging of branch prediction.
 AC_ARG_ENABLE([debugpred],
 AS_HELP_STRING([--enable-debugpred],[build binaries with support to debug branch prediction]),
@@ -190,8 +169,19 @@ if test "$use_gcov" = yes; then
 fi
 AM_CONDITIONAL(GCOV, test "$use_gcov" = yes)
 
+AC_ARG_ENABLE([valgrind],
+AS_HELP_STRING([--enable-valgrind],[run all tests under valgrind]),
+[use_valgrind=$enableval], [use_valgrind=no])
+if test "$use_valgrind" = yes; then
+  AC_CHECK_PROG(HAVE_VALGRIND, valgrind, yes, no)
+  if test "$HAVE_VALGRIND" = "no"; then
+    AC_MSG_ERROR([valgrind not found])
+  fi
+fi
+AM_CONDITIONAL(USE_VALGRIND, test "$use_valgrind" = yes)
+
 AM_CONDITIONAL(BUILD_STATIC, [dnl
-test "$use_mudflap" = yes -o "$use_gprof" = yes -o "$use_gcov" = yes])
+test "$use_gprof" = yes -o "$use_gcov" = yes])
 
 AC_ARG_ENABLE([tests-rpath],
 AS_HELP_STRING([--enable-tests-rpath],[build $ORIGIN-using rpath into tests]),
@@ -236,6 +226,9 @@ AC_CONFIG_FILES([libelf/Makefile])
 
 dnl Higher-level ELF support library.
 AC_CONFIG_FILES([libebl/Makefile])
+
+dnl DWARF-ELF Lower-level Functions support library.
+AC_CONFIG_FILES([libdwelf/Makefile])
 
 dnl DWARF library.
 AC_CONFIG_FILES([libdw/Makefile])
@@ -305,5 +298,27 @@ esac
 
 # Round up to the next release API (x.y) version.
 eu_version=$(( (eu_version + 999) / 1000 ))
+
+AC_CHECK_SIZEOF(long)
+
+# On aarch64 before glibc 2.20 we would get the kernel user_pt_regs instead
+# of the user_regs_struct from sys/user.h. They are structurally the same
+# but we get either one or the other.
+AC_CHECK_TYPE([struct user_regs_struct],
+              [sys_user_has_user_regs=yes], [sys_user_has_user_regs=no],
+              [[#include <sys/ptrace.h>]
+               [#include <sys/time.h>]
+               [#include <sys/user.h>]])
+if test "$sys_user_has_user_regs" = "yes"; then
+  AC_DEFINE(HAVE_SYS_USER_REGS, 1,
+            [Define to 1 if <sys/user.h> defines struct user_regs_struct])
+fi
+
+# On a 64-bit host where can can use $CC -m32, we'll run two sets of tests.
+# Likewise in a 32-bit build on a host where $CC -m64 works.
+utrace_BIARCH
+# `$utrace_biarch' will be `-m64' even on an uniarch i386 machine.
+CC_BIARCH="$CC $utrace_biarch"
+AC_SUBST([CC_BIARCH])
 
 AC_OUTPUT

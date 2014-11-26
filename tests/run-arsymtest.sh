@@ -18,7 +18,7 @@
 
 . $srcdir/test-subr.sh
 
-lib=../libelf/libelf.a
+lib=${abs_top_builddir}/libelf/libelf.a
 okfile=arsymtest.ok
 tmpfile=arsymtest.tmp
 testfile=arsymtest.test
@@ -28,12 +28,12 @@ tempfiles $okfile $tmpfile $testfile
 result=77
 if test -f $lib; then
     # Generate list using `nm' we check against.
-    nm -s $lib |
+    ${NM} -s $lib |
     sed -e '1,/^Arch/d' -e '/^$/,$d' |
     sort > $okfile
 
     # Now run our program using libelf.
-    testrun ./arsymtest $lib $tmpfile || exit 1
+    testrun ${abs_builddir}/arsymtest $lib $tmpfile || exit 1
     sort $tmpfile > $testfile
 
     # Compare the outputs.

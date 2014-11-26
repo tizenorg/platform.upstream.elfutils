@@ -151,8 +151,12 @@ less_lazy (Dwfl_Module *mod)
 static inline Dwarf_Off
 cudie_offset (const struct dwfl_cu *cu)
 {
+  /* These are real CUs, so there never is a type_sig8.  Note
+     initialization of dwkey.start and offset_size in intern_cu ()
+     to see why this calculates the same value for both key and
+     die.cu search items.  */
   return DIE_OFFSET_FROM_CU_OFFSET (cu->die.cu->start, cu->die.cu->offset_size,
-				    cu->die.cu->type_sig8 != 0);
+				    0);
 }
 
 static int
@@ -200,7 +204,10 @@ intern_cu (Dwfl_Module *mod, Dwarf_Off cuoff, struct dwfl_cu **result)
 	  /* XXX use non-searching lookup */
 	  Dwarf_Die *die = INTUSE(dwarf_offdie) (mod->dw, cuoff, &cu->die);
 	  if (die == NULL)
-	    return DWFL_E_LIBDW;
+	    {
+	      free (cu);
+	      return DWFL_E_LIBDW;
+	    }
 	  assert (die == &cu->die);
 
 	  struct dwfl_cu **newvec = realloc (mod->cu, ((mod->ncu + 1)

@@ -1,5 +1,5 @@
 /* Return build ID information for a module.
-   Copyright (C) 2007-2010 Red Hat, Inc.
+   Copyright (C) 2007-2010, 2014 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -52,82 +52,25 @@ found_build_id (Dwfl_Module *mod, bool set,
   return len;
 }
 
-#define NO_VADDR	((GElf_Addr) -1l)
-
-static int
-check_notes (Dwfl_Module *mod, bool set, Elf_Data *data, GElf_Addr data_vaddr)
-{
-  size_t pos = 0;
-  GElf_Nhdr nhdr;
-  size_t name_pos;
-  size_t desc_pos;
-  while ((pos = gelf_getnote (data, pos, &nhdr, &name_pos, &desc_pos)) > 0)
-    if (nhdr.n_type == NT_GNU_BUILD_ID
-	&& nhdr.n_namesz == sizeof "GNU" && !memcmp (data->d_buf + name_pos,
-						     "GNU", sizeof "GNU"))
-      return found_build_id (mod, set,
-			     data->d_buf + desc_pos, nhdr.n_descsz,
-			     data_vaddr == NO_VADDR ? 0
-			     : data_vaddr + desc_pos);
-  return 0;
-}
-
 int
 internal_function
 __libdwfl_find_build_id (Dwfl_Module *mod, bool set, Elf *elf)
 {
-  size_t shstrndx = SHN_UNDEF;
-  int result = 0;
+  const void *build_id_bits;
+  GElf_Addr build_id_elfaddr;
+  int build_id_len;
 
-  Elf_Scn *scn = elf_nextscn (elf, NULL);
+  /* For mod == NULL use dwelf_elf_gnu_build_id directly.  */
+  assert (mod != NULL);
 
-  if (scn == NULL)
-    {
-      /* No sections, have to look for phdrs.  */
-      GElf_Ehdr ehdr_mem;
-      GElf_Ehdr *ehdr = gelf_getehdr (elf, &ehdr_mem);
-      size_t phnum;
-      if (unlikely (ehdr == NULL)
-	  || unlikely (elf_getphdrnum (elf, &phnum) != 0))
-	{
-	  __libdwfl_seterrno (DWFL_E_LIBELF);
-	  return -1;
-	}
-      for (size_t i = 0; result == 0 && i < phnum; ++i)
-	{
-	  GElf_Phdr phdr_mem;
-	  GElf_Phdr *phdr = gelf_getphdr (elf, i, &phdr_mem);
-	  if (likely (phdr != NULL) && phdr->p_type == PT_NOTE)
-	    result = check_notes (mod, set,
-				  elf_getdata_rawchunk (elf,
-							phdr->p_offset,
-							phdr->p_filesz,
-							ELF_T_NHDR),
-				  dwfl_adjusted_address (mod, phdr->p_vaddr));
-	}
-    }
-  else
-    do
-      {
-	GElf_Shdr shdr_mem;
-	GElf_Shdr *shdr = gelf_getshdr (scn, &shdr_mem);
-	if (likely (shdr != NULL) && shdr->sh_type == SHT_NOTE)
-	  {
-	    /* Determine the right sh_addr in this module.  */
-	    GElf_Addr vaddr = 0;
-	    if (!(shdr->sh_flags & SHF_ALLOC))
-	      vaddr = NO_VADDR;
-	    else if (mod->e_type != ET_REL)
-	      vaddr = dwfl_adjusted_address (mod, shdr->sh_addr);
-	    else if (__libdwfl_relocate_value (mod, elf, &shstrndx,
-					       elf_ndxscn (scn), &vaddr))
-	      vaddr = NO_VADDR;
-	    result = check_notes (mod, set, elf_getdata (scn, NULL), vaddr);
-	  }
-      }
-    while (result == 0 && (scn = elf_nextscn (elf, scn)) != NULL);
+  int result = __libdwfl_find_elf_build_id (mod, elf, &build_id_bits,
+					    &build_id_elfaddr, &build_id_len);
+  if (result <= 0)
+    return result;
 
-  return result;
+  GElf_Addr build_id_vaddr = build_id_elfaddr + (build_id_elfaddr != 0
+						 ? mod->main_bias : 0);
+  return found_build_id (mod, set, build_id_bits, build_id_len, build_id_vaddr);
 }
 
 int

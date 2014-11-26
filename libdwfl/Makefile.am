@@ -2,7 +2,7 @@
 ##
 ## Process this file with automake to create Makefile.in
 ##
-## Copyright (C) 2005-2010 Red Hat, Inc.
+## Copyright (C) 2005-2010, 2013 Red Hat, Inc.
 ## This file is part of elfutils.
 ##
 ## This file is free software; you can redistribute it and/or modify
@@ -30,14 +30,12 @@
 ## not, see <http://www.gnu.org/licenses/>.
 ##
 include $(top_srcdir)/config/eu.am
-INCLUDES += -I$(srcdir) -I$(srcdir)/../libelf -I$(srcdir)/../libebl \
-	   -I$(srcdir)/../libdw
+AM_CPPFLAGS += -I$(srcdir) -I$(srcdir)/../libelf -I$(srcdir)/../libebl \
+	   -I$(srcdir)/../libdw -I$(srcdir)/../libdwelf
 VERSION = 1
 
 noinst_LIBRARIES = libdwfl.a
-if !MUDFLAP
 noinst_LIBRARIES += libdwfl_pic.a
-endif
 
 pkginclude_HEADERS = libdwfl.h
 
@@ -68,7 +66,9 @@ libdwfl_a_SOURCES = dwfl_begin.c dwfl_end.c dwfl_error.c dwfl_version.c \
 		    dwfl_module_return_value_location.c \
 		    dwfl_module_register_names.c \
 		    dwfl_segment_report_module.c \
-		    link_map.c core-file.c open.c image-header.c
+		    link_map.c core-file.c open.c image-header.c \
+		    dwfl_frame.c frame_unwind.c dwfl_frame_pc.c \
+		    linux-pid-attach.c linux-core-attach.c dwfl_frame_regs.c
 
 if ZLIB
 libdwfl_a_SOURCES += gzip.c
@@ -80,22 +80,14 @@ if LZMA
 libdwfl_a_SOURCES += lzma.c
 endif
 
-if MUDFLAP
-libdwfl = libdwfl.a $(libdw) $(libebl) $(libelf) $(libeu)
-libdw = ../libdw/libdw.a
-libelf = ../libelf/libelf.a
-else
 libdwfl = $(libdw)
 libdw = ../libdw/libdw.so
 libelf = ../libelf/libelf.so
-endif
 libebl = ../libebl/libebl.a
 libeu = ../lib/libeu.a
 
-if !MUDFLAP
 libdwfl_pic_a_SOURCES =
 am_libdwfl_pic_a_OBJECTS = $(libdwfl_a_SOURCES:.c=.os)
-endif
 
 noinst_HEADERS = libdwflP.h
 

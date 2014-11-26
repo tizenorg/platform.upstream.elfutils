@@ -1,5 +1,5 @@
 /* Standard libdwfl callbacks for debugging a live Linux process.
-   Copyright (C) 2005-2010 Red Hat, Inc.
+   Copyright (C) 2005-2010, 2013, 2014 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -29,6 +29,7 @@
 #include "libdwflP.h"
 #include <inttypes.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <errno.h>
 #include <stdio.h>
 #include <stdio_ext.h>
@@ -39,14 +40,53 @@
 #include <unistd.h>
 #include <assert.h>
 #include <endian.h>
+#include "system.h"
 
 
 #define PROCMAPSFMT	"/proc/%d/maps"
 #define PROCMEMFMT	"/proc/%d/mem"
 #define PROCAUXVFMT	"/proc/%d/auxv"
+#define PROCEXEFMT	"/proc/%d/exe"
 
 
-/* Search /proc/PID/auxv for the AT_SYSINFO_EHDR tag.  */
+/* Return ELFCLASS64 or ELFCLASS32 for the main ELF executable.  Return
+   ELFCLASSNONE for an error.  */
+
+static unsigned char
+get_pid_class (pid_t pid)
+{
+  char *fname;
+  if (asprintf (&fname, PROCEXEFMT, pid) < 0)
+    return ELFCLASSNONE;
+
+  int fd = open64 (fname, O_RDONLY);
+  free (fname);
+  if (fd < 0)
+    return ELFCLASSNONE;
+
+  unsigned char buf[EI_CLASS + 1];
+  ssize_t nread = pread_retry (fd, &buf, sizeof buf, 0);
+  close (fd);
+  if (nread != sizeof buf || buf[EI_MAG0] != ELFMAG0
+      || buf[EI_MAG1] != ELFMAG1 || buf[EI_MAG2] != ELFMAG2
+      || buf[EI_MAG3] != ELFMAG3
+      || (buf[EI_CLASS] != ELFCLASS64 && buf[EI_CLASS] != ELFCLASS32))
+    return ELFCLASSNONE;
+
+  return buf[EI_CLASS];
+}
+
+/* Search /proc/PID/auxv for the AT_SYSINFO_EHDR tag.
+
+   It would be easiest to call get_pid_class and parse everything according to
+   the 32-bit or 64-bit class.  But this would bring the overhead of syscalls
+   to open and read the "/proc/%d/exe" file.
+
+   Therefore this function tries to parse the "/proc/%d/auxv" content both
+   ways, as if it were the 32-bit format and also if it were the 64-bit format.
+   Only if it gives some valid data in both cases get_pid_class gets called.
+   In most cases only one of the format bit sizes gives valid data and the
+   get_pid_class call overhead can be saved.  */
 
 static int
 grovel_auxv (pid_t pid, Dwfl *dwfl, GElf_Addr *sysinfo_ehdr)
@@ -60,61 +100,79 @@ grovel_auxv (pid_t pid, Dwfl *dwfl, GElf_Addr *sysinfo_ehdr)
   if (fd < 0)
     return errno == ENOENT ? 0 : errno;
 
+  GElf_Addr sysinfo_ehdr64 = 0;
+  GElf_Addr sysinfo_ehdr32 = 0;
+  GElf_Addr segment_align64 = dwfl->segment_align;
+  GElf_Addr segment_align32 = dwfl->segment_align;
+  off_t offset = 0;
   ssize_t nread;
+  union
+  {
+    Elf64_auxv_t a64[64];
+    Elf32_auxv_t a32[128];
+  } d;
   do
     {
-      union
-      {
-	char buffer[sizeof (long int) * 2 * 64];
-	Elf64_auxv_t a64[sizeof (long int) * 2 * 64 / sizeof (Elf64_auxv_t)];
-	Elf32_auxv_t a32[sizeof (long int) * 2 * 32 / sizeof (Elf32_auxv_t)];
-      } d;
-      nread = read (fd, &d, sizeof d);
-      if (nread > 0)
+      eu_static_assert (sizeof d.a64 == sizeof d.a32);
+      nread = pread_retry (fd, d.a64, sizeof d.a64, offset);
+      if (nread < 0)
 	{
-	  switch (sizeof (long int))
-	    {
-	    case 4:
-	      for (size_t i = 0; (char *) &d.a32[i] < &d.buffer[nread]; ++i)
-		if (d.a32[i].a_type == AT_SYSINFO_EHDR)
-		  {
-		    *sysinfo_ehdr = d.a32[i].a_un.a_val;
-		    if (dwfl->segment_align > 1)
-		      {
-			nread = 0;
-			break;
-		      }
-		  }
-		else if (d.a32[i].a_type == AT_PAGESZ
-			 && dwfl->segment_align <= 1)
-		  dwfl->segment_align = d.a32[i].a_un.a_val;
-	      break;
-	    case 8:
-	      for (size_t i = 0; (char *) &d.a64[i] < &d.buffer[nread]; ++i)
-		if (d.a64[i].a_type == AT_SYSINFO_EHDR)
-		  {
-		    *sysinfo_ehdr = d.a64[i].a_un.a_val;
-		    if (dwfl->segment_align > 1)
-		      {
-			nread = 0;
-			break;
-		      }
-		  }
-		else if (d.a64[i].a_type == AT_PAGESZ
-			 && dwfl->segment_align <= 1)
-		  dwfl->segment_align = d.a64[i].a_un.a_val;
-	      break;
-	    default:
-	      abort ();
-	      break;
-	    }
+	  int ret = errno;
+	  close (fd);
+	  return ret;
 	}
+      for (size_t a32i = 0; a32i < nread / sizeof d.a32[0]; a32i++)
+	{
+	  const Elf32_auxv_t *a32 = d.a32 + a32i;
+	  switch (a32->a_type)
+	  {
+	    case AT_SYSINFO_EHDR:
+	      sysinfo_ehdr32 = a32->a_un.a_val;
+	      break;
+	    case AT_PAGESZ:
+	      segment_align32 = a32->a_un.a_val;
+	      break;
+	  }
+	}
+      for (size_t a64i = 0; a64i < nread / sizeof d.a64[0]; a64i++)
+	{
+	  const Elf64_auxv_t *a64 = d.a64 + a64i;
+	  switch (a64->a_type)
+	  {
+	    case AT_SYSINFO_EHDR:
+	      sysinfo_ehdr64 = a64->a_un.a_val;
+	      break;
+	    case AT_PAGESZ:
+	      segment_align64 = a64->a_un.a_val;
+	      break;
+	  }
+	}
+      offset += nread;
     }
-  while (nread > 0);
+  while (nread == sizeof d.a64);
 
   close (fd);
 
-  return nread < 0 ? errno : 0;
+  bool valid64 = sysinfo_ehdr64 != 0 || segment_align64 != dwfl->segment_align;
+  bool valid32 = sysinfo_ehdr32 != 0 || segment_align32 != dwfl->segment_align;
+
+  unsigned char pid_class = ELFCLASSNONE;
+  if (valid64 && valid32)
+    pid_class = get_pid_class (pid);
+
+  if (pid_class == ELFCLASS64 || (valid64 && ! valid32))
+    {
+      *sysinfo_ehdr = sysinfo_ehdr64;
+      dwfl->segment_align = segment_align64;
+      return 0;
+    }
+  if (pid_class == ELFCLASS32 || (! valid64 && valid32))
+    {
+      *sysinfo_ehdr = sysinfo_ehdr32;
+      dwfl->segment_align = segment_align32;
+      return 0;
+    }
+  return ENOEXEC;
 }
 
 static int
@@ -168,7 +226,6 @@ proc_maps_report (Dwfl *dwfl, FILE *f, GElf_Addr sysinfo_ehdr, pid_t pid)
 	    {
 	    bad_report:
 	      free (line);
-	      fclose (f);
 	      return -1;
 	    }
 
@@ -180,7 +237,7 @@ proc_maps_report (Dwfl *dwfl, FILE *f, GElf_Addr sysinfo_ehdr, pid_t pid)
 	}
 
       char *file = line + nread + strspn (line + nread, " \t");
-      if (file[0] == '\0' || (ino == 0 && dmajor == 0 && dminor == 0))
+      if (file[0] != '/' || (ino == 0 && dmajor == 0 && dminor == 0))
 	/* This line doesn't indicate a file mapping.  */
 	continue;
 
@@ -188,7 +245,8 @@ proc_maps_report (Dwfl *dwfl, FILE *f, GElf_Addr sysinfo_ehdr, pid_t pid)
 	  && ino == last_ino && dmajor == last_dmajor && dminor == last_dminor)
 	{
 	  /* This is another portion of the same file's mapping.  */
-	  assert (!strcmp (last_file, file));
+	  if (strcmp (last_file, file) != 0)
+	    goto bad_report;
 	  high = end;
 	}
       else
@@ -267,6 +325,7 @@ read_proc_memory (void *arg, void *data, GElf_Addr address,
 }
 
 extern Elf *elf_from_remote_memory (GElf_Addr ehdr_vma,
+				    GElf_Xword pagesize,
 				    GElf_Addr *loadbasep,
 				    ssize_t (*read_memory) (void *arg,
 							    void *data,
@@ -284,44 +343,80 @@ dwfl_linux_proc_find_elf (Dwfl_Module *mod __attribute__ ((unused)),
 			  const char *module_name, Dwarf_Addr base,
 			  char **file_name, Elf **elfp)
 {
+  int pid = -1;
   if (module_name[0] == '/')
     {
-      int fd = open64 (module_name, O_RDONLY);
-      if (fd >= 0)
+      /* When this callback is used together with dwfl_linux_proc_report
+	 then we might see mappings of special character devices.  Make
+	 sure we only open and return regular files.  Special devices
+	 might hang on open or read.  (deleted) files are super special.
+	 The image might come from memory if we are attached.  */
+      struct stat sb;
+      if (stat (module_name, &sb) == -1 || (sb.st_mode & S_IFMT) != S_IFREG)
 	{
-	  *file_name = strdup (module_name);
-	  if (*file_name == NULL)
-	    {
-	      close (fd);
-	      return ENOMEM;
-	    }
+	  if (strcmp (strrchr (module_name, ' ') ?: "", " (deleted)") == 0)
+	    pid = INTUSE(dwfl_pid) (mod->dwfl);
+	  else
+	    return -1;
 	}
-      return fd;
+
+      if (pid == -1)
+	{
+	  int fd = open64 (module_name, O_RDONLY);
+	  if (fd >= 0)
+	    {
+	      *file_name = strdup (module_name);
+	      if (*file_name == NULL)
+		{
+		  close (fd);
+		  return ENOMEM;
+		}
+	    }
+	  return fd;
+	}
     }
 
-  int pid;
-  if (sscanf (module_name, "[vdso: %d]", &pid) == 1)
+  if (pid != -1 || sscanf (module_name, "[vdso: %d]", &pid) == 1)
     {
       /* Special case for in-memory ELF image.  */
 
+      bool detach = false;
+      bool tid_was_stopped = false;
+      struct __libdwfl_pid_arg *pid_arg = __libdwfl_get_pid_arg (mod->dwfl);
+      if (pid_arg != NULL && ! pid_arg->assume_ptrace_stopped)
+	{
+	  /* If any thread is already attached we are fine.  Read
+	     through that thread.  It doesn't have to be the main
+	     thread pid.  */
+	  pid_t tid = pid_arg->tid_attached;
+	  if (tid != 0)
+	    pid = tid;
+	  else
+	    detach = __libdwfl_ptrace_attach (pid, &tid_was_stopped);
+	}
+
       char *fname;
       if (asprintf (&fname, PROCMEMFMT, pid) < 0)
-	return -1;
+	goto detach;
 
       int fd = open64 (fname, O_RDONLY);
       free (fname);
       if (fd < 0)
-	return -1;
+	goto detach;
 
-      *elfp = elf_from_remote_memory (base, NULL, &read_proc_memory, &fd);
+      *elfp = elf_from_remote_memory (base, getpagesize (), NULL,
+				      &read_proc_memory, &fd);
 
       close (fd);
 
       *file_name = NULL;
+
+    detach:
+      if (detach)
+	__libdwfl_ptrace_detach (pid, tid_was_stopped);
       return -1;
     }
 
-  abort ();
   return -1;
 }
 INTDEF (dwfl_linux_proc_find_elf)

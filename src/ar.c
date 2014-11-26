@@ -202,7 +202,7 @@ MEMBER parameter required for 'a', 'b', and 'i' modifiers"));
   if (instance_specifed)
     {
       /* Only valid for certain operations.  */
-      if (operation == oper_extract && operation == oper_delete)
+      if (operation != oper_extract && operation != oper_delete)
 	error (1, 0, gettext ("\
 'N' is only meaningful with the 'x' and 'd' options"));
 
@@ -919,7 +919,7 @@ do_oper_delete (const char *arfname, char **argv, int argc,
 		long int instance)
 {
   bool *found = alloca (sizeof (bool) * argc);
-  memset (found, '\0', sizeof (found));
+  memset (found, '\0', sizeof (bool) * argc);
 
   /* List of the files we keep.  */
   struct armem *to_copy = NULL;

@@ -50,7 +50,7 @@ dwarf_formref_die (attr, result)
     {
       /* This has an absolute offset.  */
 
-      uint8_t ref_size = (cu->version == 2
+      uint8_t ref_size = (cu->version == 2 && attr->form == DW_FORM_ref_addr
 			  ? cu->address_size
 			  : cu->offset_size);
 
@@ -89,7 +89,6 @@ dwarf_formref_die (attr, result)
 				  ?: DWARF_E_INVALID_REFERENCE);
 		return NULL;
 	      }
-	    Dwarf_Sig8_Hash_insert (&cu->dbg->sig8_hash, cu->type_sig8, cu);
 	  }
 	while (cu->type_sig8 != sig);
 

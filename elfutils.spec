@@ -1,7 +1,7 @@
 # -*- rpm-spec-*-
 Summary: A collection of utilities and DSOs to handle compiled objects
 Name: elfutils
-Version: 0.155
+Version: 0.160
 Release: 1
 License: GPLv3+ and (GPLv2+ or LGPLv3+)
 Group: Development/Tools
@@ -169,6 +169,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_includedir}/elfutils/libebl.h
 %{_includedir}/elfutils/libdw.h
 %{_includedir}/elfutils/libdwfl.h
+%{_includedir}/elfutils/libdwelf.h
 %{_libdir}/libebl.a
 #%{_libdir}/libasm.so
 %{_libdir}/libdw.so
@@ -195,6 +196,82 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_libdir}/libelf.a
 
 %changelog
+* Mon Aug 25 2014 Mark Wielaard <mjw@redhat.com> 0.160-1
+- libdw: New functions dwarf_cu_getdwarf, dwarf_cu_die.
+  dwarf.h remove non-existing DW_TAG_mutable_type.
+- libdwfl: Handle LZMA .ko.xz compressed kernel modules.
+- unstrip: New option -F, --force to combining files even if some ELF
+  headers don't seem to match.
+- backends: Handle ARM THUMB functions. Add support for ppc64le ELFv2 abi.
+
+* Sat May 17 2014 Mark Wielaard <mjw@redhat.com> 0.159-1
+- stack: New option -d, --debugname to lookup DWARF debuginfo name 
+  for frame.  New option -i, --inlines to show inlined frames 
+  using DWARF debuginfo.
+- libdwelf: New libdwelf.h header for libdw.so DWARF ELF Low-level 
+  Functions.  New function dwelf_elf_gnu_debuglink, 
+  dwelf_dwarf_gnu_debugaltlink, and dwelf_elf_gnu_build_id.
+- libdw: Support for DWZ multifile forms DW_FORM_GNU_ref_alt and      
+  DW_FORM_GNU_strp_alt is now enabled by default and no longer        
+  experimental. Added new functions dwarf_getalt and dwarf_setalt       
+  to get or set the alternative debug file used for the alt FORMs.     
+  The dwfl_linux_proc_find_elf callback will now find ELF from       
+  process memory for (deleted) files if the Dwfl has process state     
+  attached.
+- libdwfl: The dwfl_build_id_find_debuginfo and 
+  dwfl_standard_find_debuginfo functions will now try to 
+  resolve and set the alternative debug file.
+- backends: Add CFI unwinding for arm. Relies on .debug_frame.        
+  Add arm process initial register state compatible mode to AARCH64. 
+  Add aarch64 native and core unwind support.
+- other: All separate elfutils-robustify patches have been merged.    
+  CVE-2014-0172 Check overflow before calling malloc to uncompress 
+  data.
+
+* Fri Jan  3 2014 Mark Wielaard <mjw@redhat.com> 0.158-1
+- libdwfl: dwfl_core_file_report has new parameter executable.
+  New functions dwfl_module_getsymtab_first_global,
+  dwfl_module_getsym_info and dwfl_module_addrinfo.
+  Added unwinder with type Dwfl_Thread_Callbacks, opaque types
+  Dwfl_Thread and Dwfl_Frame and functions dwfl_attach_state,
+  dwfl_pid, dwfl_thread_dwfl, dwfl_thread_tid, dwfl_frame_thread,
+  dwfl_thread_state_registers, dwfl_thread_state_register_pc,
+  dwfl_getthread_frames, dwfl_getthreads, dwfl_thread_getframes
+  and dwfl_frame_pc.
+- addr2line: New option -x to show the section an address was found in.
+- stack: New utility that uses the new unwinder for processes and cores.
+- backends: Unwinder support for i386, x86_64, s390, s390x, ppc and ppc64.
+  aarch64 support.
+
+* Mon Sep 30 2013 Mark Wielaard <mjw@redhat.com> 0.157-1
+- libdw: Add new functions dwarf_getlocations, dwarf_getlocation_attr 
+         and dwarf_getlocation_die.
+- readelf: Show contents of NT_SIGINFO and NT_FILE core notes.
+- addr2line: Support -i, --inlines output option.
+- backends: abi_cfi hook for arm, ppc and s390.
+
+* Thu Jul 25 2013 Jan Kratochvil <jan.kratochvil@redhat.com> 0.156-1
+- lib: New macro COMPAT_VERSION_NEWPROTO.
+- libdw: Handle GNU extension opcodes in dwarf_getlocation.
+- libdwfl: Fix STB_GLOBAL over STB_WEAK preference in 
+  dwfl_module_addrsym.          Add minisymtab support.          Add 
+  parameter add_p_vaddr to dwfl_report_elf.          Use DT_DEBUG 
+  library search first.
+- libebl: Handle new core note types in EBL.
+- backends: Interpret NT_ARM_VFP.           Implement core file 
+  registers parsing for s390/s390x.
+- readelf: Add --elf-section input option to inspect an embedded ELF 
+  file.          Add -U, --unresolved-address-offsets output control.   
+         Add --debug-dump=decodedline support.          Accept version 
+  8 .gdb_index section format.          Adjust output formatting width. 
+           When highpc is in constant form print it also as address.    
+        Display raw .debug_aranges. Use libdw only for decodedaranges.
+- elflint: Add __bss_start__ to the list of allowed symbols.
+- tests: Add configure --enable-valgrind option to run all tests 
+  under valgrind.        Enable automake parallel-tests for make check.
+- translations: Updated Polish translation.
+- Updates for Automake 1.13.
+
 * Fri Aug 24 2012 Mark Wielaard <mjw@redhat.com> 0.155-1
 - libelf: elf*_xlatetomd now works for cross-endian ELF note data.    
        elf_getshdr now works consistently on non-mmaped ELF files after 

@@ -28,16 +28,14 @@
 ## not, see <http://www.gnu.org/licenses/>.
 ##
 include $(top_srcdir)/config/eu.am
-INCLUDES += -I$(top_srcdir)/libelf -I$(top_srcdir)/libebl -I$(top_srcdir)/libdw
+AM_CPPFLAGS += -I$(top_srcdir)/libelf -I$(top_srcdir)/libebl -I$(top_srcdir)/libdw
 
 GCC_INCLUDE = -I$(shell $(CC) -print-file-name=include)
 VERSION = 1
 
 lib_LIBRARIES = libasm.a
-if !MUDFLAP
 noinst_LIBRARIES = libasm_pic.a
 noinst_PROGRAMS = $(noinst_LIBRARIES:_pic.a=.so)
-endif
 pkginclude_HEADERS = libasm.h
 
 libasm_a_SOURCES = asm_begin.c asm_abort.c asm_end.c asm_error.c \
@@ -54,7 +52,6 @@ libasm_a_SOURCES = asm_begin.c asm_abort.c asm_end.c asm_error.c \
 		   disasm_begin.c disasm_cb.c disasm_end.c disasm_str.c \
 		   symbolhash.c
 
-if !MUDFLAP
 libasm_pic_a_SOURCES =
 am_libasm_pic_a_OBJECTS = $(libasm_a_SOURCES:.c=.os)
 
@@ -64,12 +61,12 @@ libasm_so_LDLIBS += -lpthread
 endif
 
 libasm_so_SOURCES =
-libasm.so: libasm_pic.a libasm.map
+libasm.so$(EXEEXT): libasm_pic.a libasm.map
 	$(LINK) -shared -o $@ -Wl,--whole-archive,$<,--no-whole-archive \
 		-Wl,--version-script,$(srcdir)/libasm.map,--no-undefined \
 		-Wl,--soname,$@.$(VERSION) \
 		../libebl/libebl.a ../libelf/libelf.so  $(libasm_so_LDLIBS)
-	if readelf -d $@ | fgrep -q TEXTREL; then exit 1; fi
+	if $(READELF) -d $@ | fgrep -q TEXTREL; then exit 1; fi
 	ln -fs $@ $@.$(VERSION)
 
 install: install-am libasm.so
@@ -83,7 +80,6 @@ uninstall: uninstall-am
 	rm -f $(DESTDIR)$(libdir)/libasm.so.$(VERSION)
 	rm -f $(DESTDIR)$(libdir)/libasm.so
 	rmdir --ignore-fail-on-non-empty $(DESTDIR)$(includedir)/elfutils
-endif
 
 noinst_HEADERS = libasmP.h symbolhash.h
 EXTRA_DIST = libasm.map

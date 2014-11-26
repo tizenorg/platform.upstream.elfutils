@@ -1,5 +1,5 @@
 /* Return location expression list.
-   Copyright (C) 2000-2010 Red Hat, Inc.
+   Copyright (C) 2000-2010, 2013 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2000.
 
@@ -56,6 +56,7 @@ attr_ok (Dwarf_Attribute *attr)
     case DW_AT_frame_base:
     case DW_AT_return_addr:
     case DW_AT_static_link:
+    case DW_AT_segment:
       break;
 
     default:
@@ -94,13 +95,14 @@ loc_compare (const void *p1, const void *p2)
 /* For each DW_OP_implicit_value, we store a special entry in the cache.
    This points us directly to the block data for later fetching.  */
 static void
-store_implicit_value (Dwarf *dbg, void **cache, Dwarf_Op *op,
-		      unsigned char *data)
+store_implicit_value (Dwarf *dbg, void **cache, Dwarf_Op *op)
 {
   struct loc_block_s *block = libdw_alloc (dbg, struct loc_block_s,
 					   sizeof (struct loc_block_s), 1);
+  const unsigned char *data = (const unsigned char *) (uintptr_t) op->number2;
+  (void) __libdw_get_uleb128 (&data); // Ignored, equal to op->number.
   block->addr = op;
-  block->data = data + op->number2;
+  block->data = (unsigned char *) data;
   block->length = op->number;
   (void) tsearch (block, cache, loc_compare);
 }
@@ -199,6 +201,13 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
 			   bool cfap, bool valuep,
 			   Dwarf_Op **llbuf, size_t *listlen, int sec_index)
 {
+  /* Empty location expressions don't have any ops to intern.  */
+  if (block->length == 0)
+    {
+      *listlen = 0;
+      return 0;
+    }
+
   /* Check whether we already looked at this list.  */
   struct loc_s fake = { .addr = block->data };
   struct loc_s **found = tfind (&fake, cache, loc_compare);
@@ -224,6 +233,21 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
 
   struct loclist *loclist = NULL;
   unsigned int n = 0;
+
+  if (cfap)
+    {
+      /* Synthesize the operation to push the CFA before the expression.  */
+      struct loclist *newloc;
+      newloc = (struct loclist *) alloca (sizeof (struct loclist));
+      newloc->atom = DW_OP_call_frame_cfa;
+      newloc->number = 0;
+      newloc->number2 = 0;
+      newloc->offset = -1;
+      newloc->next = loclist;
+      loclist = newloc;
+      ++n;
+    }
+
   /* Decode the opcodes.  It is possible in some situations to have a
      block of size zero.  */
   while (data < end_data)
@@ -339,6 +363,7 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
 
 	case DW_OP_const4s:
 	case DW_OP_call4:
+	case DW_OP_GNU_parameter_ref:
 	  if (unlikely (data + 4 > end_data))
 	    goto invalid;
 
@@ -363,6 +388,8 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
 	case DW_OP_plus_uconst:
 	case DW_OP_regx:
 	case DW_OP_piece:
+	case DW_OP_GNU_convert:
+	case DW_OP_GNU_reinterpret:
 	  /* XXX Check size.  */
 	  get_uleb128 (newloc->number, data);
 	  break;
@@ -381,21 +408,24 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
 	  break;
 
 	case DW_OP_bit_piece:
+	case DW_OP_GNU_regval_type:
 	  /* XXX Check size.  */
 	  get_uleb128 (newloc->number, data);
 	  get_uleb128 (newloc->number2, data);
 	  break;
 
 	case DW_OP_implicit_value:
+	case DW_OP_GNU_entry_value:
 	  /* This cannot be used in a CFI expression.  */
 	  if (unlikely (dbg == NULL))
 	    goto invalid;
 
+	  /* start of block inc. len.  */
+	  newloc->number2 = (Dwarf_Word) (uintptr_t) data;
 	  /* XXX Check size.  */
 	  get_uleb128 (newloc->number, data); /* Block length.  */
 	  if (unlikely ((Dwarf_Word) (end_data - data) < newloc->number))
 	    goto invalid;
-	  newloc->number2 = data - block->data; /* Relative block offset.  */
 	  data += newloc->number;		/* Skip the block.  */
 	  break;
 
@@ -408,6 +438,31 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
 	  get_uleb128 (newloc->number2, data); /* Byte offset.  */
 	  break;
 
+	case DW_OP_GNU_deref_type:
+	  if (unlikely (data >= end_data))
+	    goto invalid;
+	  newloc->number = *data++;
+	  get_uleb128 (newloc->number2, data);
+	  break;
+
+	case DW_OP_GNU_const_type:
+	  {
+	    size_t size;
+
+	    /* XXX Check size.  */
+	    get_uleb128 (newloc->number, data);
+	    if (unlikely (data >= end_data))
+	      goto invalid;
+
+	    /* start of block inc. len.  */
+	    newloc->number2 = (Dwarf_Word) (uintptr_t) data;
+	    size = *data++;
+	    if (unlikely ((Dwarf_Word) (end_data - data) < size))
+	      goto invalid;
+	    data += size;		/* Skip the block.  */
+	  }
+	  break;
+
 	default:
 	  goto invalid;
 	}
@@ -416,8 +471,8 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
   if (unlikely (n == 0))
     {
       /* This is not allowed.
-
-	 XXX Is it?  */
+	 It would mean an empty location expression, which we handled
+	 already as a special case above.  */
       goto invalid;
     }
 
@@ -433,9 +488,6 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
       loclist = newloc;
       ++n;
     }
-
-  if (cfap)
-    ++n;
 
   /* Allocate the array.  */
   Dwarf_Op *result;
@@ -456,16 +508,6 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
   *llbuf = result;
   *listlen = n;
 
-  if (cfap)
-    {
-      /* Synthesize the operation to push the CFA before the expression.  */
-      --n;
-      result[0].atom = DW_OP_call_frame_cfa;
-      result[0].number = 0;
-      result[0].number2 = 0;
-      result[0].offset = -1;
-    }
-
   do
     {
       /* We populate the array from the back since the list is backwards.  */
@@ -476,7 +518,7 @@ __libdw_intern_expression (Dwarf *dbg, bool other_byte_order,
       result[n].offset = loclist->offset;
 
       if (result[n].atom == DW_OP_implicit_value)
-	store_implicit_value (dbg, cache, &result[n], block->data);
+	store_implicit_value (dbg, cache, &result[n]);
 
       loclist = loclist->next;
     }
@@ -539,6 +581,121 @@ dwarf_getlocation (attr, llbuf, listlen)
   return getlocation (attr->cu, &block, llbuf, listlen, cu_sec_idx (attr->cu));
 }
 
+static int
+attr_base_address (attr, basep)
+     Dwarf_Attribute *attr;
+     Dwarf_Addr *basep;
+{
+  /* Fetch the CU's base address.  */
+  Dwarf_Die cudie = CUDIE (attr->cu);
+
+  /* Find the base address of the compilation unit.  It will
+     normally be specified by DW_AT_low_pc.  In DWARF-3 draft 4,
+     the base address could be overridden by DW_AT_entry_pc.  It's
+     been removed, but GCC emits DW_AT_entry_pc and not DW_AT_lowpc
+     for compilation units with discontinuous ranges.  */
+  Dwarf_Attribute attr_mem;
+  if (unlikely (INTUSE(dwarf_lowpc) (&cudie, basep) != 0)
+      && INTUSE(dwarf_formaddr) (INTUSE(dwarf_attr) (&cudie,
+						     DW_AT_entry_pc,
+						     &attr_mem),
+				 basep) != 0)
+    {
+      if (INTUSE(dwarf_errno) () != 0)
+	return -1;
+
+      /* The compiler provided no base address when it should
+	 have.  Buggy GCC does this when it used absolute
+	 addresses in the location list and no DW_AT_ranges.  */
+      *basep = 0;
+    }
+  return 0;
+}
+
+static int
+initial_offset_base (attr, offset, basep)
+     Dwarf_Attribute *attr;
+     ptrdiff_t *offset;
+     Dwarf_Addr *basep;
+{
+  if (attr_base_address (attr, basep) != 0)
+    return -1;
+
+  Dwarf_Word start_offset;
+  if (__libdw_formptr (attr, IDX_debug_loc,
+		       DWARF_E_NO_LOCLIST,
+		       NULL, &start_offset) == NULL)
+    return -1;
+
+  *offset = start_offset;
+  return 0;
+}
+
+static ptrdiff_t
+getlocations_addr (attr, offset, basep, startp, endp, address,
+		   locs, expr, exprlen)
+     Dwarf_Attribute *attr;
+     ptrdiff_t offset;
+     Dwarf_Addr *basep;
+     Dwarf_Addr *startp;
+     Dwarf_Addr *endp;
+     Dwarf_Addr address;
+     Elf_Data *locs;
+     Dwarf_Op **expr;
+     size_t *exprlen;
+{
+  unsigned char *readp = locs->d_buf + offset;
+  unsigned char *readendp = locs->d_buf + locs->d_size;
+
+ next:
+  if (readendp - readp < attr->cu->address_size * 2)
+    {
+    invalid:
+      __libdw_seterrno (DWARF_E_INVALID_DWARF);
+      return -1;
+    }
+
+  Dwarf_Addr begin;
+  Dwarf_Addr end;
+
+  switch (__libdw_read_begin_end_pair_inc (attr->cu->dbg, IDX_debug_loc,
+					   &readp, attr->cu->address_size,
+					   &begin, &end, basep))
+    {
+    case 0: /* got location range. */
+      break;
+    case 1: /* base address setup. */
+      goto next;
+    case 2: /* end of loclist */
+      return 0;
+    default: /* error */
+      return -1;
+    }
+
+  if (readendp - readp < 2)
+    goto invalid;
+
+  /* We have a location expression.  */
+  Dwarf_Block block;
+  block.length = read_2ubyte_unaligned_inc (attr->cu->dbg, readp);
+  block.data = readp;
+  if (readendp - readp < (ptrdiff_t) block.length)
+    goto invalid;
+  readp += block.length;
+
+  *startp = *basep + begin;
+  *endp = *basep + end;
+
+  /* If address is minus one we want them all, otherwise only matching.  */
+  if (address != (Dwarf_Word) -1 && (address < *startp || address >= *endp))
+    goto next;
+
+  if (getlocation (attr->cu, &block, expr, exprlen, IDX_debug_loc) != 0)
+    return -1;
+
+  return readp - (unsigned char *) locs->d_buf;
+}
+
 int
 dwarf_getlocation_addr (attr, address, llbufs, listlens, maxlocs)
      Dwarf_Attribute *attr;
@@ -577,85 +734,109 @@ dwarf_getlocation_addr (attr, address, llbufs, listlens, maxlocs)
   if (result != 1)
     return result ?: 1;
 
-  unsigned char *endp;
-  unsigned char *readp = __libdw_formptr (attr, IDX_debug_loc,
-					  DWARF_E_NO_LOCLIST, &endp, NULL);
-  if (readp == NULL)
+  Dwarf_Addr base, start, end;
+  Dwarf_Op *expr;
+  size_t expr_len;
+  ptrdiff_t off = 0;
+  size_t got = 0;
+
+  /* This is a true loclistptr, fetch the initial base address and offset.  */
+  if (initial_offset_base (attr, &off, &base) != 0)
     return -1;
 
-  Dwarf_Addr base = (Dwarf_Addr) -1;
-  size_t got = 0;
-  while (got < maxlocs)
+  const Elf_Data *d = attr->cu->dbg->sectiondata[IDX_debug_loc];
+  if (d == NULL)
     {
-      if (endp - readp < attr->cu->address_size * 2)
+      __libdw_seterrno (DWARF_E_NO_LOCLIST);
+      return -1;
+    }
+
+  while (got < maxlocs
+         && (off = getlocations_addr (attr, off, &base, &start, &end,
+				   address, d, &expr, &expr_len)) > 0)
+    {
+      /* This one matches the address.  */
+      if (llbufs != NULL)
 	{
-	invalid:
-	  __libdw_seterrno (DWARF_E_INVALID_DWARF);
+	  llbufs[got] = expr;
+	  listlens[got] = expr_len;
+	}
+      ++got;
+    }
+
+  /* We might stop early, so off can be zero or positive on success.  */
+  if (off < 0)
+    return -1;
+
+  return got;
+}
+
+ptrdiff_t
+dwarf_getlocations (attr, offset, basep, startp, endp, expr, exprlen)
+     Dwarf_Attribute *attr;
+     ptrdiff_t offset;
+     Dwarf_Addr *basep;
+     Dwarf_Addr *startp;
+     Dwarf_Addr *endp;
+     Dwarf_Op **expr;
+     size_t *exprlen;
+{
+  if (! attr_ok (attr))
+    return -1;
+
+  /* 1 is an invalid offset, meaning no more locations. */
+  if (offset == 1)
+    return 0;
+
+  if (offset == 0)
+    {
+      /* If it has a block form, it's a single location expression.  */
+      Dwarf_Block block;
+      if (INTUSE(dwarf_formblock) (attr, &block) == 0)
+	{
+	  if (getlocation (attr->cu, &block, expr, exprlen,
+			   cu_sec_idx (attr->cu)) != 0)
+	    return -1;
+
+	  /* This is the one and only location covering everything. */
+	  *startp = 0;
+	  *endp = -1;
+	  return 1;
+	}
+
+      int error = INTUSE(dwarf_errno) ();
+      if (unlikely (error != DWARF_E_NO_BLOCK))
+	{
+	  __libdw_seterrno (error);
 	  return -1;
 	}
 
-      Dwarf_Addr begin;
-      Dwarf_Addr end;
-
-      int status
-	= __libdw_read_begin_end_pair_inc (attr->cu->dbg, IDX_debug_loc,
-					   &readp, attr->cu->address_size,
-					   &begin, &end, &base);
-      if (status == 2) /* End of list entry.  */
-	break;
-      else if (status == 1) /* Base address selected.  */
-	continue;
-      else if (status < 0)
-	return status;
-
-      if (endp - readp < 2)
-	goto invalid;
-
-      /* We have a location expression.  */
-      block.length = read_2ubyte_unaligned_inc (attr->cu->dbg, readp);
-      block.data = readp;
-      if (endp - readp < (ptrdiff_t) block.length)
-	goto invalid;
-      readp += block.length;
-
-      if (base == (Dwarf_Addr) -1)
+      int result = check_constant_offset (attr, expr, exprlen);
+      if (result != 1)
 	{
-	  /* Fetch the CU's base address.  */
-	  Dwarf_Die cudie = CUDIE (attr->cu);
-
-	  /* Find the base address of the compilation unit.  It will
-	     normally be specified by DW_AT_low_pc.  In DWARF-3 draft 4,
-	     the base address could be overridden by DW_AT_entry_pc.  It's
-	     been removed, but GCC emits DW_AT_entry_pc and not DW_AT_lowpc
-	     for compilation units with discontinuous ranges.  */
-	  Dwarf_Attribute attr_mem;
-	  if (unlikely (INTUSE(dwarf_lowpc) (&cudie, &base) != 0)
-	      && INTUSE(dwarf_formaddr) (INTUSE(dwarf_attr) (&cudie,
-							     DW_AT_entry_pc,
-							     &attr_mem),
-					 &base) != 0)
+	  if (result == 0)
 	    {
-	      if (INTUSE(dwarf_errno) () != 0)
-		return -1;
-
-	      /* The compiler provided no base address when it should
-		 have.  Buggy GCC does this when it used absolute
-		 addresses in the location list and no DW_AT_ranges.  */
-	      base = 0;
+	      /* This is the one and only location covering everything. */
+	      *startp = 0;
+	      *endp = -1;
+	      return 1;
 	    }
+	  return result;
 	}
 
-      if (address >= base + begin && address < base + end)
-	{
-	  /* This one matches the address.  */
-	  if (llbufs != NULL
-	      && unlikely (getlocation (attr->cu, &block,
-					&llbufs[got], &listlens[got],
-					IDX_debug_loc) != 0))
-	    return -1;
-	  ++got;
-	}
+      /* We must be looking at a true loclistptr, fetch the initial
+	 base address and offset.  */
+      if (initial_offset_base (attr, &offset, basep) != 0)
+	return -1;
     }
 
-  return got;
+  const Elf_Data *d = attr->cu->dbg->sectiondata[IDX_debug_loc];
+  if (d == NULL)
+    {
+      __libdw_seterrno (DWARF_E_NO_LOCLIST);
+      return -1;
+    }
+
+  return getlocations_addr (attr, offset, basep, startp, endp,
+			    (Dwarf_Word) -1, d, expr, exprlen);
 }

@@ -37,6 +37,7 @@
 #include <sys/param.h>
 #include <alloca.h>
 #include <endian.h>
+#include <unistd.h>
 
 
 /* A good size for the initial read from memory, if it's not too costly.
@@ -83,7 +84,8 @@ dwfl_segment_report_module (Dwfl *dwfl, int ndx, const char *name,
 			    Dwfl_Memory_Callback *memory_callback,
 			    void *memory_callback_arg,
 			    Dwfl_Module_Callback *read_eagerly,
-			    void *read_eagerly_arg)
+			    void *read_eagerly_arg,
+			    const struct r_debug_info *r_debug_info)
 {
   size_t segment = ndx;
 
@@ -425,13 +427,105 @@ dwfl_segment_report_module (Dwfl *dwfl, int ndx, const char *name,
   /* We must have seen the segment covering offset 0, or else the ELF
      header we read at START was not produced by these program headers.  */
   if (unlikely (!found_bias))
-    return finish ();
+    {
+      free (build_id);
+      return finish ();
+    }
 
   /* Now we know enough to report a module for sure: its bounds.  */
   module_start += bias;
   module_end += bias;
 
   dyn_vaddr += bias;
+
+  /* NAME found from link map has precedence over DT_SONAME possibly read
+     below.  */
+  bool name_is_final = false;
+
+  /* Try to match up DYN_VADDR against L_LD as found in link map.
+     Segments sniffing may guess invalid address as the first read-only memory
+     mapping may not be dumped to the core file (if ELF headers are not dumped)
+     and the ELF header is dumped first with the read/write mapping of the same
+     file at higher addresses.  */
+  if (r_debug_info != NULL)
+    for (const struct r_debug_info_module *module = r_debug_info->module;
+	 module != NULL; module = module->next)
+      if (module_start <= module->l_ld && module->l_ld < module_end)
+	{
+	  /* L_LD read from link map must be right while DYN_VADDR is unsafe.
+	     Therefore subtract DYN_VADDR and add L_LD to get a possibly
+	     corrective displacement for all addresses computed so far.  */
+	  GElf_Addr fixup = module->l_ld - dyn_vaddr;
+	  if ((fixup & (dwfl->segment_align - 1)) == 0
+	      && module_start + fixup <= module->l_ld
+	      && module->l_ld < module_end + fixup)
+	    {
+	      module_start += fixup;
+	      module_end += fixup;
+	      dyn_vaddr += fixup;
+	      bias += fixup;
+	      if (module->name[0] != '\0')
+		{
+		  name = basename (module->name);
+		  name_is_final = true;
+		}
+	      break;
+	    }
+	}
+
+  if (r_debug_info != NULL)
+    {
+      bool skip_this_module = false;
+      for (struct r_debug_info_module *module = r_debug_info->module;
+	   module != NULL; module = module->next)
+	if ((module_end > module->start && module_start < module->end)
+	    || dyn_vaddr == module->l_ld)
+	  {
+	    bool close_elf = false;
+	    if (! module->disk_file_has_build_id && build_id_len > 0)
+	      {
+		/* Module found in segments with build-id is more reliable
+		   than a module found via DT_DEBUG on disk without any
+		   build-id.   */
+		if (module->elf != NULL)
+		  close_elf = true;
+	      }
+	    if (module->elf != NULL
+		&& module->disk_file_has_build_id && build_id_len > 0)
+	      {
+		const void *elf_build_id;
+		ssize_t elf_build_id_len;
+
+		/* If there is a build id in the elf file, check it.  */
+		elf_build_id_len = INTUSE(dwelf_elf_gnu_build_id) (module->elf,
+								&elf_build_id);
+		if (elf_build_id_len > 0)
+		  {
+		    if (build_id_len != (size_t) elf_build_id_len
+			|| memcmp (build_id, elf_build_id, build_id_len) != 0)
+		      close_elf = true;
+		  }
+	      }
+	    if (close_elf)
+	      {
+		elf_end (module->elf);
+		close (module->fd);
+		module->elf = NULL;
+		module->fd = -1;
+	      }
+	    if (module->elf != NULL)
+	      {
+		/* Ignore this found module if it would conflict in address
+		   space with any already existing module of DWFL.  */
+		skip_this_module = true;
+	      }
+	  }
+      if (skip_this_module)
+	{
+	  free (build_id);
+	  return finish ();
+	}
+    }
 
   /* Our return value now says to skip the segments contained
      within the module.  */
@@ -518,7 +612,7 @@ dwfl_segment_report_module (Dwfl *dwfl, int ndx, const char *name,
 
   void *soname = NULL;
   size_t soname_size = 0;
-  if (dynstrsz != 0 && dynstr_vaddr != 0)
+  if (! name_is_final && dynstrsz != 0 && dynstr_vaddr != 0)
     {
       /* We know the bounds of the .dynstr section.
 
@@ -650,6 +744,7 @@ dwfl_segment_report_module (Dwfl *dwfl, int ndx, const char *name,
       mod->main.elf = elf;
       mod->main.vaddr = module_start - bias;
       mod->main.address_sync = module_address_sync;
+      mod->main_bias = bias;
     }
 
   return finish ();

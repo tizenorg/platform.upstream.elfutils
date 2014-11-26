@@ -1,5 +1,5 @@
 /* Generate ELF backend handle.
-   Copyright (C) 2000-2011 Red Hat, Inc.
+   Copyright (C) 2000-2014 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -131,6 +131,7 @@ static const struct
   { "openrisc", "elf_openrisc", "openrisc", 8, EM_OPENRISC, 0, 0 },
   { "arc", "elf_arc_a5", "arc_a5", 6, EM_ARC_A5, 0, 0 },
   { "xtensa", "elf_xtensa", "xtensa", 6, EM_XTENSA, 0, 0 },
+  { "aarch64", "elf_aarch64", "aarch64", 7, EM_AARCH64, ELFCLASS64, 0 },
 };
 #define nmachines (sizeof (machines) / sizeof (machines[0]))
 
@@ -199,6 +200,7 @@ static bool default_check_object_attribute (Ebl *ebl, const char *vendor,
 					    int tag, uint64_t value,
 					    const char **tag_name,
 					    const char **value_name);
+static bool default_check_reloc_target_type (Ebl *ebl, Elf64_Word sh_type);
 static int default_abi_cfi (Ebl *ebl, Dwarf_CIE *abi_info);
 
 
@@ -240,6 +242,7 @@ fill_defaults (Ebl *result)
   result->register_info = default_register_info;
   result->syscall_abi = default_syscall_abi;
   result->check_object_attribute = default_check_object_attribute;
+  result->check_reloc_target_type = default_check_reloc_target_type;
   result->disasm = NULL;
   result->abi_cfi = default_abi_cfi;
   result->destr = default_destr;
@@ -746,9 +749,16 @@ default_check_object_attribute (Ebl *ebl __attribute__ ((unused)),
   return false;
 }
 
+static bool
+default_check_reloc_target_type (Ebl *ebl __attribute__ ((unused)),
+				 Elf64_Word sh_type __attribute__ ((unused)))
+{
+  return false;
+}
+
 static int
 default_abi_cfi (Ebl *ebl __attribute__ ((unused)),
 		 Dwarf_CIE *abi_info __attribute__ ((unused)))
 {
-  return 0;
+  return -1;
 }

@@ -1,5 +1,5 @@
 /* Internal definitions for libdwarf.
-   Copyright (C) 2002-2011 Red Hat, Inc.
+   Copyright (C) 2002-2011, 2013, 2014 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2002.
 
@@ -34,6 +34,7 @@
 #include <stdbool.h>
 
 #include <libdw.h>
+#include <dwarf.h>
 
 
 /* gettext helper macros.  */
@@ -73,6 +74,7 @@ enum
     IDX_debug_macinfo,
     IDX_debug_macro,
     IDX_debug_ranges,
+    IDX_gnu_debugaltlink,
     IDX_last
   };
 
@@ -144,9 +146,6 @@ struct Dwarf
 
   /* If true, we allocated the ELF descriptor ourselves.  */
   bool free_elf;
-
-  /* If true, we allocated the Dwarf descriptor for alt_dwarf ourselves.  */
-  bool free_alt;
 
   /* Information for traversing the .debug_pubnames section.  This is
      an array and separately allocated with malloc.  */
@@ -403,10 +402,39 @@ extern Dwarf_Abbrev *__libdw_getabbrev (Dwarf *dbg, struct Dwarf_CU *cu,
      __nonnull_attribute__ (1) internal_function;
 
 /* Helper functions for form handling.  */
-extern size_t __libdw_form_val_len (Dwarf *dbg, struct Dwarf_CU *cu,
-				    unsigned int form,
-				    const unsigned char *valp)
+extern size_t __libdw_form_val_compute_len (Dwarf *dbg, struct Dwarf_CU *cu,
+					    unsigned int form,
+					    const unsigned char *valp)
      __nonnull_attribute__ (1, 2, 4) internal_function;
+
+/* Find the length of a form attribute.  */
+static inline size_t
+__nonnull_attribute__ (1, 2, 4)
+__libdw_form_val_len (Dwarf *dbg, struct Dwarf_CU *cu,
+		      unsigned int form, const unsigned char *valp)
+{
+  /* Small lookup table of forms with fixed lengths.  Absent indexes are
+     initialized 0, so any truly desired 0 is set to 0x80 and masked.  */
+  static const uint8_t form_lengths[] =
+    {
+      [DW_FORM_flag_present] = 0x80,
+      [DW_FORM_data1] = 1, [DW_FORM_ref1] = 1, [DW_FORM_flag] = 1,
+      [DW_FORM_data2] = 2, [DW_FORM_ref2] = 2,
+      [DW_FORM_data4] = 4, [DW_FORM_ref4] = 4,
+      [DW_FORM_data8] = 8, [DW_FORM_ref8] = 8, [DW_FORM_ref_sig8] = 8,
+    };
+
+  /* Return immediately for forms with fixed lengths.  */
+  if (form < sizeof form_lengths / sizeof form_lengths[0])
+    {
+      uint8_t len = form_lengths[form];
+      if (len != 0)
+	return len & 0x7f; /* Mask to allow 0x80 -> 0.  */
+    }
+
+  /* Other forms require some computation.  */
+  return __libdw_form_val_compute_len (dbg, cu, form, valp);
+}
 
 /* Helper function for DW_FORM_ref* handling.  */
 extern int __libdw_formref (Dwarf_Attribute *attr, Dwarf_Off *return_offset)
@@ -624,13 +652,9 @@ unsigned char * __libdw_formptr (Dwarf_Attribute *attr, int sec_index,
 				 Dwarf_Off *offsetp)
   internal_function;
 
-#ifdef ENABLE_DWZ
-/* Checks that the build_id of the underlying Elf matches the expected.
-   Returns zero on match, -1 on error or no build_id found or 1 when
-   build_id doesn't match.  */
-int __check_build_id (Dwarf *dw, const uint8_t *build_id, const size_t id_len)
+/* Fills in the given attribute to point at an empty location expression.  */
+void __libdw_empty_loc_attr (Dwarf_Attribute *attr, struct Dwarf_CU *cu)
   internal_function;
-#endif /* ENABLE_DWZ */
 
 
 /* Aliases to avoid PLTs.  */
@@ -651,9 +675,11 @@ INTDECL (dwarf_formref_die)
 INTDECL (dwarf_formsdata)
 INTDECL (dwarf_formstring)
 INTDECL (dwarf_formudata)
+INTDECL (dwarf_getalt)
 INTDECL (dwarf_getarange_addr)
 INTDECL (dwarf_getarangeinfo)
 INTDECL (dwarf_getaranges)
+INTDECL (dwarf_getlocation_die)
 INTDECL (dwarf_getsrcfiles)
 INTDECL (dwarf_getsrclines)
 INTDECL (dwarf_hasattr)
@@ -665,6 +691,7 @@ INTDECL (dwarf_nextcu)
 INTDECL (dwarf_next_unit)
 INTDECL (dwarf_offdie)
 INTDECL (dwarf_ranges)
+INTDECL (dwarf_setalt)
 INTDECL (dwarf_siblingof)
 INTDECL (dwarf_srclang)
 INTDECL (dwarf_tag)

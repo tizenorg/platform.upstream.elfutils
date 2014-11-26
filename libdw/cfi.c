@@ -35,6 +35,7 @@
 #include "cfi.h"
 #include "memory-access.h"
 #include "encoded-value.h"
+#include "system.h"
 #include <assert.h>
 #include <stdlib.h>
 #include <string.h>
@@ -89,6 +90,9 @@ execute_cfi (Dwarf_CFI *cache,
 	    }
 	  else
 	    {
+	      eu_static_assert (reg_unspecified == 0);
+	      memset (bigger->regs + bigger->nregs, 0,
+		      (reg + 1 - bigger->nregs) * sizeof bigger->regs[0]);
 	      bigger->nregs = reg + 1;
 	      fs = bigger;
 	    }
@@ -248,6 +252,8 @@ execute_cfi (Dwarf_CFI *cache,
 	  continue;
 
 	case DW_CFA_expression:
+	  /* Expression rule relies on section data, abi_cfi cannot use it.  */
+	  assert (! abi_cfi);
 	  get_uleb128 (regno, program);
 	  offset = program - (const uint8_t *) cache->data->d.d_buf;
 	  /* DW_FORM_block is a ULEB128 length followed by that many bytes.  */
@@ -258,6 +264,8 @@ execute_cfi (Dwarf_CFI *cache,
 	  continue;
 
 	case DW_CFA_val_expression:
+	  /* Expression rule relies on section data, abi_cfi cannot use it.  */
+	  assert (! abi_cfi);
 	  get_uleb128 (regno, program);
 	  /* DW_FORM_block is a ULEB128 length followed by that many bytes.  */
 	  offset = program - (const uint8_t *) cache->data->d.d_buf;

@@ -1,6 +1,6 @@
 ## Common automake fragments for elfutils subdirectory makefiles.
 ##
-## Copyright (C) 2010 Red Hat, Inc.
+## Copyright (C) 2010, 2014 Red Hat, Inc.
 ##
 ## This file is part of elfutils.
 ##
@@ -30,22 +30,13 @@
 ##
 
 DEFS = -D_GNU_SOURCE -DHAVE_CONFIG_H -DLOCALEDIR='"${localedir}"'
-INCLUDES = -I. -I$(srcdir) -I$(top_srcdir)/lib -I..
-AM_CFLAGS = -std=gnu99 -Wall -Wshadow \
+AM_CPPFLAGS = -I. -I$(srcdir) -I$(top_srcdir)/lib -I..
+AM_CFLAGS = -std=gnu99 -Wall -Wshadow -Wformat=2 \
 	    $(if $($(*F)_no_Werror),,-Werror) \
 	    $(if $($(*F)_no_Wunused),,-Wunused -Wextra) \
-	    $(if $($(*F)_no_Wformat),-Wno-format,-Wformat=2) \
 	    $($(*F)_CFLAGS)
 
-if MUDFLAP
-AM_CFLAGS += -fmudflap
-libmudflap = -lmudflap
-else
-libmudflap =
-endif
-
-COMPILE.os = $(filter-out -fprofile-arcs -ftest-coverage $(no_mudflap.os),\
-	     		  $(COMPILE))
+COMPILE.os = $(filter-out -fprofile-arcs -ftest-coverage, $(COMPILE))
 
 %.os: %.c %.o
 if AMDEP
@@ -61,4 +52,4 @@ endif
 
 CLEANFILES = *.gcno *.gcda
 
-textrel_check = if readelf -d $@ | fgrep -q TEXTREL; then exit 1; fi
+textrel_check = if $(READELF) -d $@ | fgrep -q TEXTREL; then exit 1; fi

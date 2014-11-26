@@ -1,5 +1,5 @@
 /* Relocate debug information.
-   Copyright (C) 2005-2010 Red Hat, Inc.
+   Copyright (C) 2005-2011, 2014 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -38,8 +38,6 @@ internal_function
 __libdwfl_relocate_value (Dwfl_Module *mod, Elf *elf, size_t *shstrndx,
 			  Elf32_Word shndx, GElf_Addr *value)
 {
-  assert (mod->e_type == ET_REL);
-
   Elf_Scn *refscn = elf_getscn (elf, shndx);
   GElf_Shdr refshdr_mem, *refshdr = gelf_getshdr (refscn, &refshdr_mem);
   if (refshdr == NULL)
@@ -254,7 +252,8 @@ resolve_symbol (Dwfl_Module *referer, struct reloc_symtab_cache *symtab,
 
 		if (m->e_type != ET_REL)
 		  {
-		    sym->st_value = dwfl_adjusted_st_value (m, sym->st_value);
+		    sym->st_value = dwfl_adjusted_st_value (m, m->symfile->elf,
+							    sym->st_value);
 		    return DWFL_E_NOERROR;
 		  }
 
@@ -457,7 +456,10 @@ relocate_section (Dwfl_Module *mod, Elf *relocated, const GElf_Ehdr *ehdr,
       }
   }
 
-  size_t nrels = shdr->sh_size / shdr->sh_entsize;
+  size_t sh_entsize
+    = gelf_fsize (relocated, shdr->sh_type == SHT_REL ? ELF_T_REL : ELF_T_RELA,
+		  1, EV_CURRENT);
+  size_t nrels = shdr->sh_size / sh_entsize;
   size_t complete = 0;
   if (shdr->sh_type == SHT_REL)
     for (size_t relidx = 0; !result && relidx < nrels; ++relidx)
@@ -559,7 +561,7 @@ relocate_section (Dwfl_Module *mod, Elf *relocated, const GElf_Ehdr *ehdr,
 	  nrels = next;
 	}
 
-      shdr->sh_size = reldata->d_size = nrels * shdr->sh_entsize;
+      shdr->sh_size = reldata->d_size = nrels * sh_entsize;
       gelf_update_shdr (scn, shdr);
     }
 

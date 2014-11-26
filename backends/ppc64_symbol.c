@@ -1,5 +1,5 @@
 /* PPC64 specific symbolic name handling.
-   Copyright (C) 2004, 2005 Red Hat, Inc.
+   Copyright (C) 2004, 2005, 2014 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2004.
 
@@ -72,6 +72,8 @@ ppc64_dynamic_tag_name (int64_t tag, char *buf __attribute__ ((unused)),
       return "PPC64_OPD";
     case DT_PPC64_OPDSZ:
       return "PPC64_OPDSZ";
+    case DT_PPC64_OPT:
+      return "PPC64_OPT";
     default:
       break;
     }
@@ -84,7 +86,8 @@ ppc64_dynamic_tag_check (int64_t tag)
 {
   return (tag == DT_PPC64_GLINK
 	  || tag == DT_PPC64_OPD
-	  || tag == DT_PPC64_OPDSZ);
+	  || tag == DT_PPC64_OPDSZ
+	  || tag == DT_PPC64_OPT);
 }
 
 
@@ -109,4 +112,20 @@ ppc64_bss_plt_p (Elf *elf __attribute__ ((unused)),
 		 GElf_Ehdr *ehdr __attribute__ ((unused)))
 {
   return true;
+}
+
+/* Check whether machine flags are valid.  PPC64 has three possible values:
+   0 - for unspecified ABI, or not using any specific ABI features.
+   1 - for the original ELF PPC64 ABI using function descriptors.
+   2 - for the revised ELFv2 PPC64 ABI without function descriptors.  */
+bool
+ppc64_machine_flag_check (GElf_Word flags)
+{
+  return flags == 0 || flags == 1 || flags == 2;
+}
+
+bool
+ppc64_check_st_other_bits (unsigned char st_other)
+{
+  return (PPC64_LOCAL_ENTRY_OFFSET (st_other) != 0);
 }

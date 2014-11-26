@@ -1,5 +1,5 @@
 /* Write changed data structures.
-   Copyright (C) 2000-2010 Red Hat, Inc.
+   Copyright (C) 2000-2010, 2014 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2000.
 
@@ -133,7 +133,7 @@ __elfw2(LIBELFBITS,updatemmap) (Elf *elf, int change_bo, size_t shnum)
 	  (*fctp) ((char *) elf->map_address + elf->start_offset, ehdr,
 		   sizeof (ElfW2(LIBELFBITS,Ehdr)), 1);
 	}
-      else
+      else if (elf->map_address + elf->start_offset != ehdr)
 	memcpy (elf->map_address + elf->start_offset, ehdr,
 		sizeof (ElfW2(LIBELFBITS,Ehdr)));
 
@@ -202,6 +202,9 @@ __elfw2(LIBELFBITS,updatemmap) (Elf *elf, int change_bo, size_t shnum)
   /* Write all the sections.  Well, only those which are modified.  */
   if (shnum > 0)
     {
+      if (unlikely (shnum > SIZE_MAX / sizeof (Elf_Scn *)))
+	return 1;
+
       Elf_ScnList *list = &elf->state.ELFW(elf,LIBELFBITS).scns;
       Elf_Scn **scns = (Elf_Scn **) alloca (shnum * sizeof (Elf_Scn *));
       char *const shdr_start = ((char *) elf->map_address + elf->start_offset
@@ -624,6 +627,10 @@ __elfw2(LIBELFBITS,updatefile) (Elf *elf, int change_bo, size_t shnum)
   /* Write all the sections.  Well, only those which are modified.  */
   if (shnum > 0)
     {
+      if (unlikely (shnum > SIZE_MAX / (sizeof (Elf_Scn *)
+					+ sizeof (ElfW2(LIBELFBITS,Shdr)))))
+	return 1;
+
       off_t shdr_offset = elf->start_offset + ehdr->e_shoff;
 #if EV_NUM != 2
       xfct_t shdr_fctp = __elf_xfctstom[__libelf_version - 1][EV_CURRENT - 1][ELFW(ELFCLASS, LIBELFBITS) - 1][ELF_T_SHDR];
@@ -633,7 +640,8 @@ __elfw2(LIBELFBITS,updatefile) (Elf *elf, int change_bo, size_t shnum)
 #endif
 
       ElfW2(LIBELFBITS,Shdr) *shdr_data;
-      if (change_bo || elf->state.ELFW(elf,LIBELFBITS).shdr == NULL)
+      if (change_bo || elf->state.ELFW(elf,LIBELFBITS).shdr == NULL
+	  || (elf->flags & ELF_F_DIRTY))
 	shdr_data = (ElfW2(LIBELFBITS,Shdr) *)
 	  alloca (shnum * sizeof (ElfW2(LIBELFBITS,Shdr)));
       else
@@ -764,7 +772,8 @@ __elfw2(LIBELFBITS,updatefile) (Elf *elf, int change_bo, size_t shnum)
 	    (*shdr_fctp) (&shdr_data[scn->index],
 			  scn->shdr.ELFW(e,LIBELFBITS),
 			  sizeof (ElfW2(LIBELFBITS,Shdr)), 1);
-	  else if (elf->state.ELFW(elf,LIBELFBITS).shdr == NULL)
+	  else if (elf->state.ELFW(elf,LIBELFBITS).shdr == NULL
+		   || (elf->flags & ELF_F_DIRTY))
 	    memcpy (&shdr_data[scn->index], scn->shdr.ELFW(e,LIBELFBITS),
 		    sizeof (ElfW2(LIBELFBITS,Shdr)));
 

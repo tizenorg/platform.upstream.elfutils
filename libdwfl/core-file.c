@@ -1,5 +1,5 @@
 /* Core file handling.
-   Copyright (C) 2008-2010 Red Hat, Inc.
+   Copyright (C) 2008-2010, 2013 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -381,8 +381,46 @@ dwfl_elf_phdr_memory_callback (Dwfl *dwfl, int ndx,
   return true;
 }
 
+/* Free the contents of R_DEBUG_INFO without the R_DEBUG_INFO memory itself.  */
+
+static void
+clear_r_debug_info (struct r_debug_info *r_debug_info)
+{
+  while (r_debug_info->module != NULL)
+    {
+      struct r_debug_info_module *module = r_debug_info->module;
+      r_debug_info->module = module->next;
+      elf_end (module->elf);
+      if (module->fd != -1)
+	close (module->fd);
+      free (module);
+    }
+}
+
+bool
+internal_function
+__libdwfl_dynamic_vaddr_get (Elf *elf, GElf_Addr *vaddrp)
+{
+  size_t phnum;
+  if (unlikely (elf_getphdrnum (elf, &phnum) != 0))
+    return false;
+  for (size_t i = 0; i < phnum; ++i)
+    {
+      GElf_Phdr phdr_mem;
+      GElf_Phdr *phdr = gelf_getphdr (elf, i, &phdr_mem);
+      if (unlikely (phdr == NULL))
+	return false;
+      if (phdr->p_type == PT_DYNAMIC)
+	{
+	  *vaddrp = phdr->p_vaddr;
+	  return true;
+	}
+    }
+  return false;
+}
+
 int
-dwfl_core_file_report (Dwfl *dwfl, Elf *elf)
+dwfl_core_file_report (Dwfl *dwfl, Elf *elf, const char *executable)
 {
   size_t phnum;
   if (unlikely (elf_getphdrnum (elf, &phnum) != 0))
@@ -391,31 +429,24 @@ dwfl_core_file_report (Dwfl *dwfl, Elf *elf)
       return -1;
     }
 
+  free (dwfl->executable_for_core);
+  if (executable == NULL)
+    dwfl->executable_for_core = NULL;
+  else
+    {
+      dwfl->executable_for_core = strdup (executable);
+      if (dwfl->executable_for_core == NULL)
+	{
+	  __libdwfl_seterrno (DWFL_E_NOMEM);
+	  return -1;
+	}
+    }
+
   /* First report each PT_LOAD segment.  */
   GElf_Phdr notes_phdr;
   int ndx = dwfl_report_core_segments (dwfl, elf, phnum, &notes_phdr);
   if (unlikely (ndx <= 0))
     return ndx;
-
-  /* Now sniff segment contents for modules.  */
-  int sniffed = 0;
-  ndx = 0;
-  do
-    {
-      int seg = dwfl_segment_report_module (dwfl, ndx, NULL,
-					    &dwfl_elf_phdr_memory_callback, elf,
-					    core_file_read_eagerly, elf);
-      if (unlikely (seg < 0))
-	return seg;
-      if (seg > ndx)
-	{
-	  ndx = seg;
-	  ++sniffed;
-	}
-      else
-	++ndx;
-    }
-  while (ndx < (int) phnum);
 
   /* Next, we should follow the chain from DT_DEBUG.  */
 
@@ -451,13 +482,99 @@ dwfl_core_file_report (Dwfl *dwfl, Elf *elf)
   /* Now we have NT_AUXV contents.  From here on this processing could be
      used for a live process with auxv read from /proc.  */
 
-  int listed = dwfl_link_map_report (dwfl, auxv, auxv_size,
-				     dwfl_elf_phdr_memory_callback, elf);
+  struct r_debug_info r_debug_info;
+  memset (&r_debug_info, 0, sizeof r_debug_info);
+  int retval = dwfl_link_map_report (dwfl, auxv, auxv_size,
+				     dwfl_elf_phdr_memory_callback, elf,
+				     &r_debug_info);
+  int listed = retval > 0 ? retval : 0;
+
+  /* Now sniff segment contents for modules hinted by information gathered
+     from DT_DEBUG.  */
+
+  ndx = 0;
+  do
+    {
+      int seg = dwfl_segment_report_module (dwfl, ndx, NULL,
+					    &dwfl_elf_phdr_memory_callback, elf,
+					    core_file_read_eagerly, elf,
+					    &r_debug_info);
+      if (unlikely (seg < 0))
+	{
+	  clear_r_debug_info (&r_debug_info);
+	  return seg;
+	}
+      if (seg > ndx)
+	{
+	  ndx = seg;
+	  ++listed;
+	}
+      else
+	++ndx;
+    }
+  while (ndx < (int) phnum);
+
+  /* Now report the modules from dwfl_link_map_report which were not filtered
+     out by dwfl_segment_report_module.  */
+
+  Dwfl_Module **lastmodp = &dwfl->modulelist;
+  while (*lastmodp != NULL)
+    lastmodp = &(*lastmodp)->next;
+  for (struct r_debug_info_module *module = r_debug_info.module;
+       module != NULL; module = module->next)
+    {
+      if (module->elf == NULL)
+	continue;
+      GElf_Addr file_dynamic_vaddr;
+      if (! __libdwfl_dynamic_vaddr_get (module->elf, &file_dynamic_vaddr))
+	continue;
+      Dwfl_Module *mod;
+      mod = __libdwfl_report_elf (dwfl, basename (module->name), module->name,
+				  module->fd, module->elf,
+				  module->l_ld - file_dynamic_vaddr,
+				  true, true);
+      if (mod == NULL)
+	continue;
+      ++listed;
+      module->elf = NULL;
+      module->fd = -1;
+      /* Move this module to the end of the list, so that we end
+	 up with a list in the same order as the link_map chain.  */
+      if (mod->next != NULL)
+	{
+	  if (*lastmodp != mod)
+	    {
+	      lastmodp = &dwfl->modulelist;
+	      while (*lastmodp != mod)
+		lastmodp = &(*lastmodp)->next;
+	    }
+	  *lastmodp = mod->next;
+	  mod->next = NULL;
+	  while (*lastmodp != NULL)
+	    lastmodp = &(*lastmodp)->next;
+	  *lastmodp = mod;
+	}
+      lastmodp = &mod->next;
+    }
+
+  clear_r_debug_info (&r_debug_info);
 
   /* We return the number of modules we found if we found any.
      If we found none, we return -1 instead of 0 if there was an
-     error rather than just nothing found.  If link_map handling
-     failed, we still have the sniffed modules.  */
-  return sniffed == 0 || listed > sniffed ? listed : sniffed;
+     error rather than just nothing found.  */
+  return listed > 0 ? listed : retval;
 }
 INTDEF (dwfl_core_file_report)
+NEW_VERSION (dwfl_core_file_report, ELFUTILS_0.158)
+
+#ifdef SHARED
+int _compat_without_executable_dwfl_core_file_report (Dwfl *dwfl, Elf *elf);
+COMPAT_VERSION_NEWPROTO (dwfl_core_file_report, ELFUTILS_0.146,
+			 without_executable)
+
+int
+_compat_without_executable_dwfl_core_file_report (Dwfl *dwfl, Elf *elf)
+{
+  return dwfl_core_file_report (dwfl, elf, NULL);
+}
+#endif
