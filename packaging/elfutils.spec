@@ -1,6 +1,6 @@
 %define keepstatic 1
 Name:           elfutils
-Version:        0.155
+Version:        0.160
 Release:        0
 License:        GPL-3.0+
 Summary:        Higher-level library to access ELF
@@ -206,5 +206,6 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 %dir %{_includedir}/elfutils
 %{_includedir}/elfutils/libdw.h
 %{_includedir}/elfutils/libdwfl.h
+%{_includedir}/elfutils/libdwelf.h
 
 %changelog
