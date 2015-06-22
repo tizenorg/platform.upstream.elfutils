@@ -97,7 +97,7 @@ __libelf_readall (elf)
 	    goto read_error;
 
 	  if (sizeof (size_t) >= sizeof (st.st_size)
-	      || st.st_size <= ~((size_t) 0))
+	      || st.st_size <= ~((off_t) 0))
 	    elf->maximum_size = (size_t) st.st_size;
 	  else
 	    {
