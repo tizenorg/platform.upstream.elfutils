@@ -199,18 +199,14 @@ elf_getarsym (elf, ptr)
       elf->state.ar.ar_sym = (Elf_Arsym *) malloc (ar_sym_len);
       if (elf->state.ar.ar_sym != NULL)
 	{
-	  union
-	  {
-	    uint32_t u32[n];
-	    uint64_t u64[n];
-	  } *file_data;
+	  uint64_t file_data[n];
+	  uint64_t *file_data_u64 = (uint64_t *) file_data;
+	  uint32_t *file_data_u32 = (uint32_t *) file_data;
 	  char *str_data;
 	  size_t sz = n * w;
 
 	  if (elf->map_address == NULL)
 	    {
-	      file_data = alloca (sz);
-
 	      ar_sym_len += index_size - n * w;
 	      Elf_Arsym *newp = (Elf_Arsym *) realloc (elf->state.ar.ar_sym,
 						       ar_sym_len);
@@ -242,10 +238,8 @@ elf_getarsym (elf, ptr)
 	    }
 	  else
 	    {
-	      file_data = (void *) (elf->map_address + off);
-	      if (!ALLOW_UNALIGNED
-		  && ((uintptr_t) file_data & -(uintptr_t) n) != 0)
-		file_data = memcpy (alloca (sz), elf->map_address + off, sz);
+	      file_data_u64 = (void *) (elf->map_address + off);
+	      file_data_u32 = (void *) (elf->map_address + off);
 	      str_data = (char *) (elf->map_address + off + sz);
 	    }
 
@@ -256,7 +250,7 @@ elf_getarsym (elf, ptr)
 	      arsym[cnt].as_name = str_data;
 	      if (index64_p)
 		{
-		  uint64_t tmp = file_data->u64[cnt];
+		  uint64_t tmp = file_data_u64[cnt];
 		  if (__BYTE_ORDER == __LITTLE_ENDIAN)
 		    tmp = bswap_64 (tmp);
 
@@ -278,9 +272,9 @@ elf_getarsym (elf, ptr)
 		    }
 		}
 	      else if (__BYTE_ORDER == __LITTLE_ENDIAN)
-		arsym[cnt].as_off = bswap_32 (file_data->u32[cnt]);
+		arsym[cnt].as_off = bswap_32 (file_data_u32[cnt]);
 	      else
-		arsym[cnt].as_off = file_data->u32[cnt];
+		arsym[cnt].as_off = file_data_u32[cnt];
 
 	      arsym[cnt].as_hash = _dl_elf_hash (str_data);
 	      str_data = rawmemchr (str_data, '\0') + 1;
