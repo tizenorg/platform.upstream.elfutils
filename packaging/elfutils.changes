@@ -1,0 +1,14 @@
+* Wed Nov 26 2014 Chanho Park <chanho61.park@samsung.com> upstream/0.160-16-ge1928b6
+- Imported Upstream version 0.160
+
+* Tue Aug 06 2013 Anas Nashif <anas.nashif@intel.com> accepted/tizen/20130717.234746@06b5418
+- Update license and package groups
+
+* Sun Jul 07 2013 Anas Nashif <anas.nashif@intel.com> upstream/0.155@17429c6
+- Update to 0.155
+
+* Fri Mar 22 2013 Anas Nashif <anas.nashif@intel.com> submit/trunk/20130322.175838@d05566b
+- Do not parse changes file
+
+* Fri Mar 22 2013 Anas Nashif <anas.nashif@intel.com> upstream/0.153@d038d48
+- Fixed package groups
