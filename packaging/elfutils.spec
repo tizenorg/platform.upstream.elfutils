@@ -1,6 +1,6 @@
 %define keepstatic 1
 Name:           elfutils
-Version:        0.160
+Version:        0.165
 Release:        0
 License:        GPL-3.0+
 Summary:        Higher-level library to access ELF
@@ -117,7 +117,7 @@ cp %{SOURCE1001} .
 #TIME="\"$(date -d "${modified}" "+%%R")\""
 #find . -type f -regex ".*\.c\|.*\.cpp\|.*\.h" -exec sed -i "s/__DATE__/${DATE}/g;s/__TIME__/${TIME}/g" {} +
 autoreconf -fi
-%configure --program-prefix=eu- --disable-werror
+%configure --program-prefix=eu- --disable-werror --enable-maintainer-mode
 make %{?_smp_mflags}
 
 %install
@@ -182,6 +182,7 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 %defattr(-,root,root)
 %{_libdir}/libelf.so
 %{_libdir}/libelf.a
+%{_libdir}/pkgconfig/libelf.pc
 #%{_libdir}/libelf_pic.a
 %{_includedir}/libelf.h
 %{_includedir}/gelf.h
@@ -189,6 +190,7 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 %dir %{_includedir}/elfutils
 %{_includedir}/elfutils/elf-knowledge.h
 %{_includedir}/elfutils/version.h
+%{_includedir}/elfutils/known-dwarf.h
 
 %files -n libdw
 %manifest %{name}.manifest
@@ -207,5 +209,6 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 %{_includedir}/elfutils/libdw.h
 %{_includedir}/elfutils/libdwfl.h
 %{_includedir}/elfutils/libdwelf.h
+%{_libdir}/pkgconfig/libdw.pc
 
 %changelog
