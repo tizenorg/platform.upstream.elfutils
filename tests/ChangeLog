@@ -1,3 +1,552 @@
+2016-01-08  Mark Wielaard  <mjw@redhat.com>
+
+	* elfputzdata.c (main): Fix parentheses in strncmp test.
+
+2016-01-08  Mark Wielaard  <mjw@redhat.com>
+
+	* elfputzdata.c (main): Use PRId64 to print 64 bit value.
+
+2016-01-08  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (TESTS): Always unconditionally add
+	run-readelf-zdebug.sh and run-readelf-zdebug-rel.sh.
+
+2015-12-16  Mark Wielaard  <mjw@redhat.com>
+
+	* run-compress-test.sh: New test.
+	* Makefile.am (TESTS): Add run-compress-test.sh.
+	(EXTRA_DISTS): Likewise.
+
+2015-11-26  Mark Wielaard  <mjw@redhat.com>
+
+	* zstrptr.c: New file.
+	* run-zstrptr.sh: New test.
+	* elfputzdata.c (main): (re)compress .shstrtab.
+	* run-elfputzdata.sh: Expect .shstrtab compression.
+	* Makefile.am (check_PROGRAMS): Add zstrptr.
+	(TESTS): Add run-zstrptr.sh.
+	(EXTRA_DIST): Likewise.
+	(zstrptr_LDADD): New variable.
+
+2015-10-20  Mark Wielaard  <mjw@redhat.com>
+
+	* run-readelf-zx.sh: New test.
+	* run-readelf-zp.sh: Likewise.
+	* Makefile.am (TESTS): Add run-readelf-zx.sh and run-readelf-zp.sh.
+	(EXTRA_DIST): Likewise.
+
+2015-10-21  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (check_PROGRAMS): Add elfgetzdata and elfputzdata.
+	(TESTS): Add run-elfgetzdata.sh and run-elfputzdata.sh.
+	(EXTRA_DIST: Likewise.
+	(elfgetzdata_LDADD): New variable.
+	(elfputzdata_LDADD): Likewise.
+	* elfgetzdata.c: New file.
+	* elfputzdata.c: Likewise.
+	* msg_tst.c: Handle ELF_E_ALREADY_COMPRESSED,
+	ELF_E_UNKNOWN_COMPRESSION_TYPE, ELF_E_COMPRESS_ERROR and
+	ELF_E_DECOMPRESS_ERROR.
+	* run-elfgetzdata.sh: New test.
+	* run-elfputzdata.sh: Likewise.
+
+2015-10-28  Mark Wielaard  <mjw@redhat.com>
+
+	* run-readelf-z.sh: New test.
+	* Makefile.am (TESTS): Add run-readelf-z.sh.
+	(EXTRA_DIST): Likewise.
+
+2015-10-28  Mark Wielaard  <mjw@redhat.com>
+
+	* elfgetchdr.c: New file.
+	* run-elfgetchdr.sh: New test.
+	* testfile-zgabi32.bz2: New testfile.
+	* testfile-zgabi32be.bz2: Likewise.
+	* testfile-zgabi64.bz2: Likewise.
+	* testfile-zgabi64be.bz2: Likewise.
+	* Makefile.am (check_PROGRAMS): Add elfgetchdr.
+	(TESTS): Add run-elfgetchdr.sh.
+	(EXTRA_DIST): Add run-elfgetchdr.sh, testfile-zgabi32.bz2,
+	testfile-zgabi32be.bz2, testfile-zgabi64.bz2, testfile-zgabi64be.bz2.
+	(welfgetchdr_LDADD): New variable.
+	* msg_tst.c: Add ELF_E_NOT_COMPRESSED, ELF_E_INVALID_SECTION_TYPE
+	and ELF_E_INVALID_SECTION_FLAGS,
+
+
+2015-10-28  Mark Wielaard  <mjw@redhat.com>
+
+	* dwelfgnucompressed.c: New file.
+	* run-dwelfgnucompressed.sh: New test.
+	* testfile-zgnu32.bz2: New testfile.
+	* testfile-zgnu64.bz2: Likewise.
+	* Makefile.am (check_PROGRAMS): Add dwelfgnucompressed.
+	(TESTS): Add run-dwelfgnucompressed.sh.
+	(EXTRA_DIST): Add run-dwelfgnucompressed.sh, testfile-zgnu32.bz2,
+	testfile-zgnu64.bz2, testfile-zgnu32be.bz2, testfile-zgnu64be.bz2.
+	(dwelfgnucompressed_LDADD): New variable.
+
+2015-12-31  Mark Wielaard  <mjw@redhat.com>
+
+	* elfstrmerge.c (main): Warn about STT_SECTION symbol for shstrhndx.
+	* run-elfstrmerge-test.sh: New test.
+	* Makefile.am (TESTS): Add run-elfstrmerge-test.sh
+	(EXTRA_DIST): Likewise.
+
+2015-12-08  Jose E. Marchesi  <jose.marchesi@oracle.com>
+
+	* run-backtrace-core-sparc.sh: New file.
+	* backtrace.sparc.core.bz2: New file.
+	* backtrace.sparc.exec.bz2: New file.
+	* Makefile.am (EXTRA_DIST): ... and added all here.
+	(TESTS): Added run-backtrace-core-sparc.sh.
+
+2015-12-02  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (valgrind_cmd): Use --leak-check=full.
+	* run-backtrace-demangle.sh: Disable valgrind.
+	* run-stack-demangled-test.sh: Likewise.
+	* run-stack-d-test.sh: Likewise.
+	* run-stack-i-test.sh: Likewise.
+
+2015-12-01  Mark Wielaard  <mjw@redhat.com>
+
+	* test-flag-nobits.c (main): Call elf_end.
+	* rerequest_tag.c (main): Call dwarf_end.
+	* funcscopes.c (handle_function): Free scopes.
+	* dwarf-getstring.c (main): Call dwarf_end.
+	* allregs.c (main): Free state.info.
+	* alldts.c (main): Free dyn.
+	* addrcfi.c (handle_address): Free stuff.frame between handle_cfi
+	calls.
+	* addrscopes.c (handle_address): Free scopes.
+
+2015-10-16  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am [BUILD_STATIC] (libdw): Add -lz.
+	[BUILD_STATIC] (libelf): Likewise.
+
+2015-10-16  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (dwfl_proc_attach_LDFLAGS): Add AM_LDFLAGS.
+
+2015-10-09  Josh Stone  <jistone@redhat.com>
+
+	* lfs-symbols: New list of LFS-related symbols from lintian.
+	* testfile-nolfs.bz2: New test binary for sanity checking.
+	* run-lfs-symbols.sh: New test.
+	* Makefile.am (TESTS): Add run-lfs-symbols.sh.
+	(EXTRA_DIST): Add lfs-symbols, testfile-nolfs.bz2, and
+	run-lfs-symbols.sh.
+	* alldts.c (main): Replace open64 with open.
+	* dwarf-getstring.c (main): Likewise.
+	* arls.c: Include config.h.
+	* ecp.c: Likewise.
+	* rdwrmmap.c: Likewise.
+	* test-elf_cntl_gelf_getshdr.c: Likewise.
+	* test-flag-nobits.c: Include config.h.
+	(main): Replace open64 with open.
+
+2015-10-09  Mark Wielaard  <mjw@redhat.com>
+
+	* elfshphehdr.c (check): Rename argument from check to statement.
+	(check_elf): Likewise.
+
+2015-10-05  Josh Stone  <jistone@redhat.com>
+
+	* Makefile.am (backtrace-child-biarch): Add AM_V_CC silencer.
+
+2015-10-02  Mark Wielaard  <mjw@redhat.com>
+
+	* elfstrmerge.c: New check program.
+	* run-strip-strmerge.sh: New test.
+	* Makefile.am (check_PROGRAMS): Add elfstrmerge.
+	(EXTRA_DIST): Add run-strip-strmerge.sh
+	(elfstrmerge_LDADD): New variable.
+
+2015-09-29  Mark Wielaard  <mjw@redhat.com>
+
+	* elfshphehdr.c: New test.
+	* Makefile.am (check_PROGRAMS): Add elfshphehdr.
+	(TESTS): Likewise.
+	(elfshphehdr_LDADD): New variable.
+
+2015-09-08  Mark Wielaard  <mjw@redhat.com>
+
+	* dwfl-proc-attach.c: New test.
+	* Makefile.am (check_PROGRAMS): Add dwfl-proc-attach.
+	(TESTS): Likewise.
+	(dwfl_proc_attach_LDADD): New variable.
+	(dwfl_proc_attach_LDFLAGS): Likewise.
+
+2015-09-04  Chih-Hung Hsieh  <chh@google.com>
+
+	* varlocs.c (print_base_type): Initialize enctype.
+
+2015-09-04  Chih-Hung Hsieh  <chh@google.com>
+
+	* md5-sha1-test.c (md5_expected): Removed.
+	(sha1_expected): Likewise.
+
+2015-09-04  Chih-Hung Hsieh  <chh@google.com>
+
+	* asm-tst1.c (main): Replace %Z length modifier with %z.
+	* asm-tst2.c (main): Likewise.
+	* asm-tst3.c (main): Likewise.
+	* asm-tst4.c (main): Likewise.
+	* asm-tst5.c (main): Likewise.
+	* asm-tst6.c (main): Likewise.
+	* asm-tst7.c (main): Likewise.
+	* asm-tst8.c (main): Likewise.
+	* asm-tst9.c (main): Likewise.
+	* sectiondump.c (print_bytes): Likewise.
+
+2015-08-14  Mark Wielaard  <mjw@redhat.com>
+
+	* run-addr2line-alt-debugpath.sh: New test.
+	* Makefile.am (TESTS): Add run-addr2line-alt-debugpath.sh
+	(EXTRA_DIST): Likewise.
+
+2015-07-29  Mark Wielaard  <mjw@redhat.com>
+
+	* run-unstrip-test3.sh: New test.
+	* testfile-info-link.bz2: New file.
+	* testfile-info-link.debuginfo.bz2: Likewise.
+	* testfile-info-link.stripped.bz2: Likewise.
+	* Makefile.am (TESTS): Add run-unstrip-test3.sh.
+	(EXTRA_DIST): Add run-unstrip-test3.sh, testfile-info-link.bz2,
+	testfile-info-link.debuginfo.bz2, testfile-info-link.stripped.bz2.
+
+2015-06-27  Pino Toscano  <toscano.pino@tiscali.it>
+
+	* tests/run-deleted.sh: Skip when detecting a not implemented
+	dwfl_linux_proc_attach.
+
+2015-06-27  Pino Toscano  <toscano.pino@tiscali.it>
+
+	* tests/dwfl-bug-fd-leak.c (elfutils_open): Check for null results of
+	dwfl_addrmodule.
+
+2015-06-26  Pino Toscano  <toscano.pino@tiscali.it>
+
+	* tests/vdsosyms.c [!__linux__] (main): Mark argv as unused.
+
+2015-06-26  Pino Toscano  <toscano.pino@tiscali.it>
+
+	* tests/backtrace-data.c: Reduce scope of some includes to match their
+	usage.
+	* tests/backtrace.c: Likewise.
+	* tests/deleted.c: Likewise.
+
+2015-06-16  Mark Wielaard  <mjw@redhat.com>
+
+	* run-strip-test.sh: Add strip-in-place (eu-strip without -o) test
+	for non-ET_REL files.
+
+2015-05-30  Mark Wielaard  <mjw@redhat.com>
+
+	* backtrace-subr.sh (check_native_core): Notice core file couldn't be
+	generated before skipping.
+	* run-addr2line-i-demangle-test.sh: Notice demangler is unsupported
+	before skipping.
+	* run-backtrace-demangle.sh: Likewise.
+	* run-stack-demangled-test.sh: Likewise.
+	* run-backtrace-native-biarch.sh: Notice biarch testing is disabled
+	before skipping.
+	* run-backtrace-native-core-biarch.sh: Likewise.
+	* test-subr.sh (testfiles): Notice how bunzip2 fails before skipping.
+
+2015-05-20  Mark Wielaard  <mjw@redhat.com>
+
+	* run-addr2line-i-test.sh: Add pretty test.
+	* run-addr2line-test.sh: Likewise.
+
+2015-05-20  Mark Wielaard  <mjw@redhat.com>
+
+	* run-addr2line-i-demangle-test.sh: New test.
+	* Makefile.am (TESTS): Add run-addr2line-i-demangle-test.sh.
+	(EXTRA_DIST): Likewise.
+
+2015-05-20  Mark Wielaard  <mjw@redhat.com>
+
+	* run-addr2line-test.sh: Add -a test variants.
+	* run-addr2line-i-test.sh: Likewise.
+
+2015-05-20  Mark Wielaard  <mjw@redhat.com>
+
+	* run-addrname-test.sh: Make sure all input addresses are hex.
+
+2015-05-04  Max Filippov  <jcmvbkbc@gmail.com>
+
+	* backtrace-child.c (stdarg, main): Replace assert_perror with assert.
+	* backtrace-data.c (memory_read, maps_lookup, set_initial_registers)
+	(main): Likewise.
+	* backtrace-dwarf.c (main): Likewise.
+	* backtrace.c (prepare_thread, exec_dump): Likewise.
+
+2015-05-04  Anthony G. Basile  <blueness@gentoo.org>
+
+	* Makefile.am (line2addr_LDADD, addrscopes_LDADD, funcscopes_LDADD)
+	(funcretval_LDADD, allregs_LDADD, find_prologues_LDADD)
+	(dwflmodtest_LDADD, dwfl_addr_sect_LDADD, addrcfi_LDADD)
+	(low_high_pc_LDADD, dwflsyms_LDADD, dwfllines_LDADD, varlocs_LDADD)
+	(backtrace_LDADD, aggregate_size_LDADD): Append $(argp_LDADD).
+
+2015-05-01  Mark Wielaard  <mjw@redhat.com>
+
+	* run-stack-d-test.sh: Use --raw and mangled output.
+	* run-stack-i-test.sh: Likewise.
+	* run-stack-demangled-test.sh: New test.
+	* Makefile.am (EXTRA_DIST): Add run-stack-demangled-test.sh.
+	(TESTS): Likewise.
+
+2015-04-01  H.J. Lu  <hjl.tools@gmail.com>
+
+	* Makefile.am (TESTS): Add run-strip-test10.sh.
+	(EXTRA_DIST): Likewise. Add testfile-x32-d.bz2.
+	Add testfile-x32-debug.bz2.
+	* run-strip-test10.sh: New file.
+	* testfile-x32-d.bz2: Likewise.
+	* testfile-x32-debug.bz2: Likewise.
+
+2015-04-01  H.J. Lu  <hjl.tools@gmail.com>
+
+	* Makefile.am (TESTS): Add run-strip-test9.sh.
+	(EXTRA_DIST): Likewise. Add testfile-x32-s.bz2.
+	* run-strip-test9.sh: New file.
+	* testfile-x32-s.bz2: Likewise.
+
+2015-04-01  H.J. Lu  <hjl.tools@gmail.com>
+
+	* Makefile.am (TESTS): Add run-backtrace-core-x32.sh.
+	(EXTRA_DIST): Likewise. Add backtrace.x32.core.bz2.
+	Add backtrace.x32.exec.bz2.
+	* backtrace.x32.core.bz2 : New file.
+	* backtrace.x32.exec.bz2: Likewise.
+	* run-backtrace-core-x32.sh: Likewise.
+
+2015-04-01  H.J. Lu  <hjl.tools@gmail.com>
+
+	* run-addrcfi.sh: Add a test for testfile-x32.
+	* testfile-x32.bz2: New file.
+	* Makefile.am (EXTRA_DIST): Add testfile-x32.bz2.
+
+2015-04-01  H.J. Lu  <hjl.tools@gmail.com>
+
+	* run-allregs.sh: Add a test for testfile-x32-core.
+
+2015-04-01  H.J. Lu  <hjl.tools@gmail.com>
+
+	* run-readelf-mixed-corenote.sh: Add a test for testfile-x32-core.
+	* testfile-x32-core.bz2: New file.
+	* Makefile.am (EXTRA_DIST): Add testfile-x32-core.bz2.
+
+2015-03-18  Petr Machata  <pmachata@redhat.com>
+
+	* addrcfi.c (op_name): Adjust uses of know-dwarf.h macros to match
+	the API changes.
+	* allregs.c (dwarf_encoding_string): Likewise.
+	* show-die-info.c (dwarf_tag_string, dwarf_attr_string): Likewise.
+	* varlocs.c (dwarf_encoding_string, dwarf_opcode_string): Likewise.
+
+2015-03-18  Petr Machata  <pmachata@redhat.com>
+
+	* Makefile.am (EXTRA_DIST): Add run-dwarf-ranges.sh,
+	debug-ranges-no-lowpc.o.bz2.
+
+2015-03-13  Mark Wielaard  <mjw@redhat.com>
+
+	* backtrace-dwarf.c: Add explicit includes.
+	(cleanup_13_abort): Remove unused static declaration.
+	(thread_callback): Add explicit return.
+
+2015-03-13  H.J. Lu  <hjl.tools@gmail.com>
+
+	* backtrace.c (prepare_thread): Use PTRACE_GETREGS/PTRACE_SETREGS
+	instead of PTRACE_POKEUSER.
+	(exec_dump): Check EM_X86_64 instead of ELFCLASS64 for
+	is_x86_64_native.
+
+2015-02-18  Mark Wielaard  <mjw@redhat.com>
+
+	* newdata.c (check_section_data): Use PRId64 for printing loff_t.
+
+2015-02-11  Josh Stone  <jistone@redhat.com>
+
+	* backtrace.c (exec_dump): Initialize jmp.
+
+2015-02-11  Petr Machata  <pmachata@redhat.com>
+
+	* run-dwarf-ranges.sh: New test.
+	* dwarf-ranges.c: New file.
+	* debug-ranges-no-lowpc.s, debug-ranges-no-lowpc.o.bz2: New test case.
+
+2015-01-21  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (check_PROGRAMS): Add elfstrtab.
+	(TESTS): Likewise.
+	(elfstrtab_LDADD): New variable.
+	* elfstrtab.c: New test.
+
+2015-01-20  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (check_PROGRAMS): Add newdata.
+	(TESTS): Likewise.
+	(newdata_LDADD): new variable.
+	* newdata.c: New test.
+
+2015-01-20  Mark Wielaard  <mjw@redhat.com>
+
+	* strptr.c: New file.
+	* run-strptr.sh: New test.
+	* Makefile.am (check_PROGRAMS): Add strptr.
+	(TESTS): Add run-strptr.sh.
+	(EXTRA_DIST): Likewise.
+	(strptr_LDADD): New variable.
+
+2015-01-15  Mark Wielaard  <mjw@redhat.com>
+
+	* deleted.c (main): Call prctl(PR_SET_PTRACER, PR_SET_PTRACER_ANY).
+	* vdsosyms.c (main): Use getpid () instead of getppid ().
+
+2014-12-27  Mark Wielaard  <mjw@redhat.com>
+
+	* addrscopes.c (handle_address): Last address in scope is highpc - 1.
+	* funcscopes.c (handle_function): Likewise.
+	* run-addrscopes.sh: Adjust last address in scope.
+	* run-funcscopes.sh: Likewise.
+
+2015-01-07  Mark Wielaard  <mjw@redhat.com>
+
+	* run-addrcfi.sh: Add test for ppc32 eh_frame_hdr address search.
+
+2015-01-14  Mark Wielaard  <mjw@redhat.com>
+
+	* testfile-debug-types.bz2: New testfile.
+	* Makefile.am (EXTRA_DIST): Add testfile-debug-types.bz2.
+	* typeiter2.c (main): Print both name and offset of found form DIE.
+	* run-typeiter.s: Adjust output and add testfile-debug-types.
+
+2014-12-26  Mark Wielaard  <mjw@redhat.com>
+
+	* run-test-archive64.sh: Add nm test.
+
+2014-12-19  Mark Wielaard  <mjw@redhat.com>
+
+	* run-deleted.sh: Don't check libfunc on ppc64.
+
+2014-12-19  Mark Wielaard  <mjw@redhat.com>
+
+	* vdsosyms.c (vdso_seen): Removed.
+	(vdso_syms): New global.
+	(module_callback): Set and check vdso_syms.
+	(main): Return value depends on vdso_syms.
+
+2014-12-19  Mark Wielaard  <mjw@redhat.com>
+
+	* backtrace-subr.sh (check_native_unsupported): Relax special ARM
+	grep a little.
+	* run-deleted.sh: Call check_native_unsupported.
+
+2014-12-18  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (EXTRA_DIST): Add testfile-macros-0xff.bz2.
+
+2014-12-12  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (deleted_lib_so_CFLAGS): Add
+	-fasynchronous-unwind-tables.
+
+2014-12-11  Josh Stone  <jistone@redhat.com>
+
+	* run-addr2line-i-lex-test.sh: New test.
+	* testfile-lex-inlines.bz2: New testfile.
+	* Makefile.am (EXTRA_DIST): Add run-addr2line-i-lex-test.sh and
+	testfile-lex-inlines.bz2.
+	(TESTS): Add run-addr2line-i-lex-test.sh.
+
+2014-12-10  Josh Stone  <jistone@redhat.com>
+
+	* run-addr2line-i-test.sh: Test 0x5f0 to make sure linkage_name is
+	preferred over the plain die name.
+
+2014-12-02  Petr Machata  <pmachata@redhat.com>
+
+	* dwarf-getmacros.c (mac): Skip over DW_MACINFO_undef,
+	DW_MACRO_GNU_undef_indirect opcodes.  Add a default branch.
+	(main): Initialize off to DWARF_GETMACROS_START when an extra
+	command line argument is passed.
+	* testfile-macros-0xff.bz2: New test case.
+	* testfile-macros-0xff.s: New file (source for the above).
+	* run-dwarf-getmacros.sh: Add two tests.
+
+2014-11-27  Mark Wielaard  <mjw@redhat.com>
+
+	* vdsosyms.c (main): Call dwfl_linux_proc_attach.
+
+2014-11-21  Mark Wielaard  <mjw@redhat.com>
+
+	* run-readelf-A.sh: New test.
+	* testfileppc32attrs.o.bz2: New test file.
+	* Makefile.am (TESTS): Add run-readelf-A.sh.
+	(EXTRA_DIST): Add run-readelf-A.sh and testfileppc32attrs.o.bz2.
+
+2014-11-10  Mark Wielaard  <mjw@redhat.com>
+
+	* vdsosyms.c: New test.
+	* Makefile.am (check_PROGRAMS): Add vdsosyms.
+	(TESTS): Likewise.
+	(vdsosyms_LDADD): New variable.
+
+2014-09-10  Petr Machata  <pmachata@redhat.com>
+
+	* dwarf-getmacros.c: Update to use the new macro iteration
+	interfaces.
+	* run-dwarf-getmacros.sh: Adjust, add a test that uses
+	testfile-macros.
+
+2014-10-06  Mark Wielaard  <mjw@redhat.com>
+
+	* run-aggregate-size.sh: Add testfile-sizes3.o test case.
+	* testfile-sizes3.o.bz2: New test file.
+	* Makefile.am (EXTRA_DIST): Add testfile-sizes3.o.bz2.
+
+2014-10-02  Mark Wielaard  <mjw@redhat.com>
+
+	* run-deleted.sh: Unset VALGRIND_CMD before running deleted.
+
+2014-10-02  Mark Wielaard  <mjw@redhat.com>
+
+	* Makefile.am (check_PROGRAMS): Add aggregate_size.c.
+	(TESTS): Add run-aggregate-size.sh.
+	(EXTRA_DIST): Add run-aggregate-size.sh, testfile-sizes1.o.bz2
+	and testfile-sizes2.o.bz2.
+	(aggregate_size_LDADD): New variable.
+	* aggregate_size.c: New file.
+	* run-aggregate-size.sh: New test.
+	* testfile-sizes1.o.bz2: New test file.
+	* testfile-sizes2.o.bz2: Likewise.
+
+2014-09-26  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	Support NT_FILE for locating files.
+	* Makefile.am (TESTS): Add run-linkmap-cut.sh.
+	(EXTRA_DIST): Add run-linkmap-cut.sh, linkmap-cut-lib.so.bz2,
+	linkmap-cut.bz2 and linkmap-cut.core.bz2 .
+	* linkmap-cut-lib.so.bz2: New file.
+	* linkmap-cut.bz2: New file.
+	* linkmap-cut.core.bz2: New file.
+	* run-linkmap-cut.sh: New file.
+	* run-unstrip-n.sh: Update its expected output.
+
+2014-08-28  Jan Kratochvil  <jan.kratochvil@redhat.com>
+
+	* Makefile.am (check_PROGRAMS): Add deleted and deleted-lib.so.
+	(TESTS, EXTRA_DIST): Add run-deleted.sh.
+	(deleted_LDADD, deleted_lib_so_LDFLAGS, deleted_lib_so_CFLAGS): New.
+	* deleted-lib.c: New file.
+	* deleted.c: New file.
+	* run-deleted.sh: New file.
+
 2014-06-15  Mark Wielaard  <mjw@redhat.com>
 
 	* backtrace.c (frame_callback): Error on seeing more than 16 frames.

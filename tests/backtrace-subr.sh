@@ -1,4 +1,4 @@
-# Copyright (C) 2013 Red Hat, Inc.
+# Copyright (C) 2013, 2015 Red Hat, Inc.
 # This file is part of elfutils.
 #
 # This file is free software; you can redistribute it and/or modify
@@ -87,7 +87,7 @@ check_native_unsupported()
   # and we can fall back on .debug_frame for the CFI.
   case "`uname -m`" in
     arm* )
-      if grep 'dwfl_thread_getframes: No DWARF information found' $err; then
+      if egrep 'dwfl_thread_getframes(.*)No DWARF information found' $err; then
 	echo >&2 $testname: arm needs debuginfo installed for all libraries
 	exit 77
       fi
@@ -135,7 +135,7 @@ check_native_core()
   if [ -f core ]; then
     mv core "$core"
   fi
-  if [ ! -f "$core" ]; then exit 77; fi
+  if [ ! -f "$core" ]; then echo "No $core file generated"; exit 77; fi
 
   if [ "x$SAVED_VALGRIND_CMD" != "x" ]; then
     VALGRIND_CMD="$SAVED_VALGRIND_CMD"

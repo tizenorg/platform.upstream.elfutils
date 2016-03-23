@@ -1,5 +1,5 @@
 #! /bin/bash
-# Copyright (C) 2014 Red Hat, Inc.
+# Copyright (C) 2014, 2015 Red Hat, Inc.
 # This file is part of elfutils.
 #
 # This file is free software; you can redistribute it and/or modify
@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 if test -n "$ELFUTILS_DISABLE_DEMANGLE"; then
+  echo "demangler unsupported"
   exit 77
 fi
 
@@ -25,6 +26,11 @@ child=testfile-backtrace-demangle
 testfiles $child{,.core}
 tempfiles $child.{bt,err}
 
+# Disable valgrind while dumping because of a bug unmapping libc.so.
+# https://bugs.kde.org/show_bug.cgi?id=327427
+SAVED_VALGRIND_CMD="$VALGRIND_CMD"
+unset VALGRIND_CMD
+
 # There can be more than 3 frames, but depending on the system/installed
 # glibc we might not be able to unwind fully till the end.
 # cxxfunc -> f -> main
@@ -32,6 +38,12 @@ tempfiles $child.{bt,err}
 # (exit code 1)
 testrun ${abs_top_builddir}/src/stack -n 2 -e $child --core $child.core >$child.bt 2>$child.err || exitcode=$?
 cat $child.{bt,err}
+
+if [ "x$SAVED_VALGRIND_CMD" != "x" ]; then
+  VALGRIND_CMD="$SAVED_VALGRIND_CMD"
+  export VALGRIND_CMD
+fi
+
 if test $exitcode != 1 || ! grep "shown max number of frames" $child.err; then
   echo >&2 $2: expected more than 2 frames
   false

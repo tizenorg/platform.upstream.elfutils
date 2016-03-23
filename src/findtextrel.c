@@ -1,5 +1,5 @@
 /* Locate source files or functions which caused text relocations.
-   Copyright (C) 2005-2010, 2012 Red Hat, Inc.
+   Copyright (C) 2005-2010, 2012, 2014 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2005.
 
@@ -215,7 +215,7 @@ process_file (const char *fname, bool more_than_one)
       real_fname = new_fname;
     }
 
-  int fd = open64 (real_fname, O_RDONLY);
+  int fd = open (real_fname, O_RDONLY);
   if (fd == -1)
     {
       error (0, errno, gettext ("cannot open '%s'"), fname);
@@ -324,14 +324,20 @@ process_file (const char *fname, bool more_than_one)
   if (segments == NULL)
     error (1, errno, gettext ("while reading ELF file"));
 
-  for (int i = 0; i < ehdr->e_phnum; ++i)
+  size_t phnum;
+  if (elf_getphdrnum (elf, &phnum) != 0)
+    error (1, 0, gettext ("cannot get program header count: %s"),
+           elf_errmsg (-1));
+
+
+  for (size_t i = 0; i < phnum; ++i)
     {
       GElf_Phdr phdr_mem;
       GElf_Phdr *phdr = gelf_getphdr (elf, i, &phdr_mem);
       if (phdr == NULL)
 	{
 	  error (0, 0,
-		 gettext ("cannot get program header index at offset %d: %s"),
+		 gettext ("cannot get program header index at offset %zd: %s"),
 		 i, elf_errmsg (-1));
 	  result = 1;
 	  goto next;
@@ -349,7 +355,7 @@ process_file (const char *fname, bool more_than_one)
 	      if (segments == NULL)
 		{
 		  error (0, 0, gettext ("\
-cannot get program header index at offset %d: %s"),
+cannot get program header index at offset %zd: %s"),
 			 i, elf_errmsg (-1));
 		  result = 1;
 		  goto next;
@@ -382,7 +388,7 @@ cannot get program header index at offset %d: %s"),
 			   fname, fname_len),
 		  ".debug");
 
-	  fd2 = open64 (difname, O_RDONLY);
+	  fd2 = open (difname, O_RDONLY);
 	  if (fd2 != -1
 	      && (elf2 = elf_begin (fd2, ELF_C_READ_MMAP, NULL)) != NULL)
 	    dw = dwarf_begin_elf (elf2, DWARF_C_READ, NULL);
@@ -400,7 +406,7 @@ cannot get program header index at offset %d: %s"),
 	  if (shdr == NULL)
 	    {
 	      error (0, 0,
-		     gettext ("cannot get section header of section %Zu: %s"),
+		     gettext ("cannot get section header of section %zu: %s"),
 		     elf_ndxscn (scn), elf_errmsg (-1));
 	      result = 1;
 	      goto next;
@@ -478,6 +484,7 @@ cannot get relocation at index %d in section %zu in '%s': %s"),
   if (fd2 != -1)
     close (fd2);
 
+  free (segments);
   tdestroy (knownsrcs, noop);
 
   return result;

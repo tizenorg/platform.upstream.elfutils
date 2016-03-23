@@ -1,5 +1,5 @@
 /* Find debugging and symbol information for a module in libdwfl.
-   Copyright (C) 2005-2012, 2014 Red Hat, Inc.
+   Copyright (C) 2005-2012, 2014, 2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -46,7 +46,7 @@ open_elf_file (Elf **elf, int *fd, char **name)
       /* If there was a pre-primed file name left that the callback left
 	 behind, try to open that file name.  */
       if (*fd < 0 && *name != NULL)
-	*fd = TEMP_FAILURE_RETRY (open64 (*name, O_RDONLY));
+	*fd = TEMP_FAILURE_RETRY (open (*name, O_RDONLY));
 
       if (*fd < 0)
 	return CBFAIL;
@@ -231,6 +231,24 @@ __libdwfl_getelf (Dwfl_Module *mod)
   mod->main_bias = mod->e_type == ET_REL ? 0 : mod->low_addr - mod->main.vaddr;
 }
 
+static inline void
+consider_shdr (GElf_Addr interp,
+               GElf_Word sh_type,
+               GElf_Xword sh_flags,
+               GElf_Addr sh_addr,
+               GElf_Xword sh_size,
+               GElf_Addr *phighest)
+{
+  if ((sh_flags & SHF_ALLOC)
+      && ((sh_type == SHT_PROGBITS && sh_addr != interp)
+          || sh_type == SHT_NOBITS))
+    {
+      const GElf_Addr sh_end = sh_addr + sh_size;
+      if (sh_end > *phighest)
+        *phighest = sh_end;
+    }
+}
+
 /* If the main file might have been prelinked, then we need to
    discover the correct synchronization address between the main and
    debug files.  Because of prelink's section juggling, we cannot rely
@@ -367,35 +385,44 @@ find_prelink_address_sync (Dwfl_Module *mod, struct dwfl_file *file)
   src.d_size = phnum * phentsize;
 
   GElf_Addr undo_interp = 0;
+  bool class32 = ehdr.e32.e_ident[EI_CLASS] == ELFCLASS32;
   {
-    union
-    {
-      Elf32_Phdr p32[phnum];
-      Elf64_Phdr p64[phnum];
-    } phdr;
-    dst.d_buf = &phdr;
-    dst.d_size = sizeof phdr;
+    size_t phdr_size = class32 ? sizeof (Elf32_Phdr) : sizeof (Elf64_Phdr);
+    if (unlikely (phnum > SIZE_MAX / phdr_size))
+      return DWFL_E_NOMEM;
+    const size_t phdrs_bytes = phnum * phdr_size;
+    void *phdrs = malloc (phdrs_bytes);
+    if (unlikely (phdrs == NULL))
+      return DWFL_E_NOMEM;
+    dst.d_buf = phdrs;
+    dst.d_size = phdrs_bytes;
     if (unlikely (gelf_xlatetom (mod->main.elf, &dst, &src,
 				 ehdr.e32.e_ident[EI_DATA]) == NULL))
-      return DWFL_E_LIBELF;
-    if (ehdr.e32.e_ident[EI_CLASS] == ELFCLASS32)
       {
+	free (phdrs);
+	return DWFL_E_LIBELF;
+      }
+    if (class32)
+      {
+	Elf32_Phdr (*p32)[phnum] = phdrs;
 	for (uint_fast16_t i = 0; i < phnum; ++i)
-	  if (phdr.p32[i].p_type == PT_INTERP)
+	  if ((*p32)[i].p_type == PT_INTERP)
 	    {
-	      undo_interp = phdr.p32[i].p_vaddr;
+	      undo_interp = (*p32)[i].p_vaddr;
 	      break;
 	    }
       }
     else
       {
+	Elf64_Phdr (*p64)[phnum] = phdrs;
 	for (uint_fast16_t i = 0; i < phnum; ++i)
-	  if (phdr.p64[i].p_type == PT_INTERP)
+	  if ((*p64)[i].p_type == PT_INTERP)
 	    {
-	      undo_interp = phdr.p64[i].p_vaddr;
+	      undo_interp = (*p64)[i].p_vaddr;
 	      break;
 	    }
       }
+    free (phdrs);
   }
 
   if (unlikely ((main_interp == 0) != (undo_interp == 0)))
@@ -405,16 +432,21 @@ find_prelink_address_sync (Dwfl_Module *mod, struct dwfl_file *file)
   src.d_type = ELF_T_SHDR;
   src.d_size = gelf_fsize (mod->main.elf, ELF_T_SHDR, shnum - 1, EV_CURRENT);
 
-  union
-  {
-    Elf32_Shdr s32[shnum - 1];
-    Elf64_Shdr s64[shnum - 1];
-  } shdr;
-  dst.d_buf = &shdr;
-  dst.d_size = sizeof shdr;
+  size_t shdr_size = class32 ? sizeof (Elf32_Shdr) : sizeof (Elf64_Shdr);
+  if (unlikely (shnum - 1  > SIZE_MAX / shdr_size))
+    return DWFL_E_NOMEM;
+  const size_t shdrs_bytes = (shnum - 1) * shdr_size;
+  void *shdrs = malloc (shdrs_bytes);
+  if (unlikely (shdrs == NULL))
+    return DWFL_E_NOMEM;
+  dst.d_buf = shdrs;
+  dst.d_size = shdrs_bytes;
   if (unlikely (gelf_xlatetom (mod->main.elf, &dst, &src,
 			       ehdr.e32.e_ident[EI_DATA]) == NULL))
-    return DWFL_E_LIBELF;
+    {
+      free (shdrs);
+      return DWFL_E_LIBELF;
+    }
 
   /* Now we can look at the original section headers of the main file
      before it was prelinked.  First we'll apply our method to the main
@@ -434,22 +466,6 @@ find_prelink_address_sync (Dwfl_Module *mod, struct dwfl_file *file)
 
   GElf_Addr highest;
 
-  inline void consider_shdr (GElf_Addr interp,
-			     GElf_Word sh_type,
-			     GElf_Xword sh_flags,
-			     GElf_Addr sh_addr,
-			     GElf_Xword sh_size)
-  {
-    if ((sh_flags & SHF_ALLOC)
-	&& ((sh_type == SHT_PROGBITS && sh_addr != interp)
-	    || sh_type == SHT_NOBITS))
-      {
-	const GElf_Addr sh_end = sh_addr + sh_size;
-	if (sh_end > highest)
-	  highest = sh_end;
-      }
-  }
-
   highest = 0;
   scn = NULL;
   while ((scn = elf_nextscn (mod->main.elf, scn)) != NULL)
@@ -457,29 +473,45 @@ find_prelink_address_sync (Dwfl_Module *mod, struct dwfl_file *file)
       GElf_Shdr sh_mem;
       GElf_Shdr *sh = gelf_getshdr (scn, &sh_mem);
       if (unlikely (sh == NULL))
-	return DWFL_E_LIBELF;
+	{
+	  free (shdrs);
+	  return DWFL_E_LIBELF;
+	}
       consider_shdr (main_interp, sh->sh_type, sh->sh_flags,
-		     sh->sh_addr, sh->sh_size);
+		     sh->sh_addr, sh->sh_size, &highest);
     }
   if (highest > mod->main.vaddr)
     {
       mod->main.address_sync = highest;
 
       highest = 0;
-      if (ehdr.e32.e_ident[EI_CLASS] == ELFCLASS32)
-	for (size_t i = 0; i < shnum - 1; ++i)
-	  consider_shdr (undo_interp, shdr.s32[i].sh_type, shdr.s32[i].sh_flags,
-			 shdr.s32[i].sh_addr, shdr.s32[i].sh_size);
+      if (class32)
+	{
+	  Elf32_Shdr (*s32)[shnum - 1] = shdrs;
+	  for (size_t i = 0; i < shnum - 1; ++i)
+	    consider_shdr (undo_interp, (*s32)[i].sh_type,
+			   (*s32)[i].sh_flags, (*s32)[i].sh_addr,
+			   (*s32)[i].sh_size, &highest);
+	}
       else
-	for (size_t i = 0; i < shnum - 1; ++i)
-	  consider_shdr (undo_interp, shdr.s64[i].sh_type, shdr.s64[i].sh_flags,
-			 shdr.s64[i].sh_addr, shdr.s64[i].sh_size);
+	{
+	  Elf64_Shdr (*s64)[shnum - 1] = shdrs;
+	  for (size_t i = 0; i < shnum - 1; ++i)
+	    consider_shdr (undo_interp, (*s64)[i].sh_type,
+			   (*s64)[i].sh_flags, (*s64)[i].sh_addr,
+			   (*s64)[i].sh_size, &highest);
+	}
 
       if (highest > file->vaddr)
 	file->address_sync = highest;
       else
-	return DWFL_E_BAD_PRELINK;
+	{
+	  free (shdrs);
+	  return DWFL_E_BAD_PRELINK;
+	}
     }
+
+  free (shdrs);
 
   return DWFL_E_NOERROR;
 }
@@ -575,6 +607,8 @@ load_symtab (struct dwfl_file *file, struct dwfl_file **symfile,
 	switch (shdr->sh_type)
 	  {
 	  case SHT_SYMTAB:
+	    if (shdr->sh_entsize == 0)
+	      break;
 	    symtab = true;
 	    *symscn = scn;
 	    *symfile = file;
@@ -589,6 +623,8 @@ load_symtab (struct dwfl_file *file, struct dwfl_file **symfile,
 	    if (symtab)
 	      break;
 	    /* Use this if need be, but keep looking for SHT_SYMTAB.  */
+	    if (shdr->sh_entsize == 0)
+	      break;
 	    *symscn = scn;
 	    *symfile = file;
 	    *strshndx = shdr->sh_link;
@@ -621,7 +657,7 @@ load_symtab (struct dwfl_file *file, struct dwfl_file **symfile,
 /* Translate addresses into file offsets.
    OFFS[*] start out zero and remain zero if unresolved.  */
 static void
-find_offsets (Elf *elf, size_t phnum, size_t n,
+find_offsets (Elf *elf, GElf_Addr main_bias, size_t phnum, size_t n,
 	      GElf_Addr addrs[n], GElf_Off offs[n])
 {
   size_t unsolved = n;
@@ -632,13 +668,148 @@ find_offsets (Elf *elf, size_t phnum, size_t n,
       if (phdr != NULL && phdr->p_type == PT_LOAD && phdr->p_memsz > 0)
 	for (size_t j = 0; j < n; ++j)
 	  if (offs[j] == 0
-	      && addrs[j] >= phdr->p_vaddr
-	      && addrs[j] - phdr->p_vaddr < phdr->p_filesz)
+	      && addrs[j] >= phdr->p_vaddr + main_bias
+	      && addrs[j] - (phdr->p_vaddr + main_bias) < phdr->p_filesz)
 	    {
-	      offs[j] = addrs[j] - phdr->p_vaddr + phdr->p_offset;
+	      offs[j] = addrs[j] - (phdr->p_vaddr + main_bias) + phdr->p_offset;
 	      if (--unsolved == 0)
 		break;
 	    }
+    }
+}
+
+/* Various addresses we might want to pull from the dynamic segment.  */
+enum
+{
+  i_symtab,
+  i_strtab,
+  i_hash,
+  i_gnu_hash,
+  i_max
+};
+
+/* Translate pointers into file offsets.  ADJUST is either zero
+   in case the dynamic segment wasn't adjusted or mod->main_bias.
+   Will set mod->symfile if the translated offsets can be used as
+   symbol table.  */
+static void
+translate_offs (GElf_Addr adjust,
+                Dwfl_Module *mod, size_t phnum,
+                GElf_Addr addrs[i_max], GElf_Xword strsz,
+                GElf_Ehdr *ehdr)
+{
+  GElf_Off offs[i_max] = { 0, };
+  find_offsets (mod->main.elf, adjust, phnum, i_max, addrs, offs);
+
+  /* Figure out the size of the symbol table.  */
+  if (offs[i_hash] != 0)
+    {
+      /* In the original format, .hash says the size of .dynsym.  */
+
+      size_t entsz = SH_ENTSIZE_HASH (ehdr);
+      Elf_Data *data = elf_getdata_rawchunk (mod->main.elf,
+					     offs[i_hash] + entsz, entsz,
+					     (entsz == 4
+					      ? ELF_T_WORD : ELF_T_XWORD));
+      if (data != NULL)
+	mod->syments = (entsz == 4
+			? *(const GElf_Word *) data->d_buf
+			: *(const GElf_Xword *) data->d_buf);
+    }
+  if (offs[i_gnu_hash] != 0 && mod->syments == 0)
+    {
+      /* In the new format, we can derive it with some work.  */
+
+      const struct
+      {
+        Elf32_Word nbuckets;
+        Elf32_Word symndx;
+        Elf32_Word maskwords;
+        Elf32_Word shift2;
+      } *header;
+
+      Elf_Data *data = elf_getdata_rawchunk (mod->main.elf, offs[i_gnu_hash],
+					     sizeof *header, ELF_T_WORD);
+      if (data != NULL)
+        {
+          header = data->d_buf;
+          Elf32_Word nbuckets = header->nbuckets;
+          Elf32_Word symndx = header->symndx;
+          GElf_Off buckets_at = (offs[i_gnu_hash] + sizeof *header
+				 + (gelf_getclass (mod->main.elf)
+				    * sizeof (Elf32_Word)
+				    * header->maskwords));
+
+          // elf_getdata_rawchunk takes a size_t, make sure it
+          // doesn't overflow.
+#if SIZE_MAX <= UINT32_MAX
+          if (nbuckets > SIZE_MAX / sizeof (Elf32_Word))
+            data = NULL;
+          else
+#endif
+            data = elf_getdata_rawchunk (mod->main.elf, buckets_at,
+					   nbuckets * sizeof (Elf32_Word),
+					   ELF_T_WORD);
+	  if (data != NULL && symndx < nbuckets)
+	    {
+	      const Elf32_Word *const buckets = data->d_buf;
+	      Elf32_Word maxndx = symndx;
+	      for (Elf32_Word bucket = 0; bucket < nbuckets; ++bucket)
+		if (buckets[bucket] > maxndx)
+		  maxndx = buckets[bucket];
+
+	      GElf_Off hasharr_at = (buckets_at
+				     + nbuckets * sizeof (Elf32_Word));
+	      hasharr_at += (maxndx - symndx) * sizeof (Elf32_Word);
+	      do
+		{
+		  data = elf_getdata_rawchunk (mod->main.elf,
+					       hasharr_at,
+					       sizeof (Elf32_Word),
+					       ELF_T_WORD);
+		  if (data != NULL
+		      && (*(const Elf32_Word *) data->d_buf & 1u))
+		    {
+		      mod->syments = maxndx + 1;
+		      break;
+		    }
+		  ++maxndx;
+		  hasharr_at += sizeof (Elf32_Word);
+		}
+	      while (data != NULL);
+	    }
+	}
+    }
+  if (offs[i_strtab] > offs[i_symtab] && mod->syments == 0)
+    mod->syments = ((offs[i_strtab] - offs[i_symtab])
+		    / gelf_fsize (mod->main.elf,
+				  ELF_T_SYM, 1, EV_CURRENT));
+
+  if (mod->syments > 0)
+    {
+      mod->symdata = elf_getdata_rawchunk (mod->main.elf,
+					   offs[i_symtab],
+					   gelf_fsize (mod->main.elf,
+						       ELF_T_SYM,
+						       mod->syments,
+						       EV_CURRENT),
+						       ELF_T_SYM);
+      if (mod->symdata != NULL)
+	{
+	  mod->symstrdata = elf_getdata_rawchunk (mod->main.elf,
+						  offs[i_strtab],
+						  strsz,
+						  ELF_T_BYTE);
+	  if (mod->symstrdata == NULL)
+	    mod->symdata = NULL;
+	}
+      if (mod->symdata == NULL)
+	mod->symerr = DWFL_E (LIBELF, elf_errno ());
+      else
+	{
+	  mod->symfile = &mod->main;
+	  mod->symerr = DWFL_E_NOERROR;
+	}
     }
 }
 
@@ -670,14 +841,6 @@ find_dynsym (Dwfl_Module *mod)
 	  if (data == NULL)
 	    continue;
 
-	  enum
-	    {
-	      i_symtab,
-	      i_strtab,
-	      i_hash,
-	      i_gnu_hash,
-	      i_max
-	    };
 	  GElf_Addr addrs[i_max] = { 0, };
 	  GElf_Xword strsz = 0;
 	  size_t n = data->d_size / gelf_fsize (mod->main.elf,
@@ -718,113 +881,14 @@ find_dynsym (Dwfl_Module *mod)
 	      break;
 	    }
 
-	  /* Translate pointers into file offsets.  */
-	  GElf_Off offs[i_max] = { 0, };
-	  find_offsets (mod->main.elf, phnum, i_max, addrs, offs);
+	  /* First try unadjusted, like ELF files from disk, vdso.
+	     Then try for already adjusted dynamic section, like ELF
+	     from remote memory.  */
+	  translate_offs (0, mod, phnum, addrs, strsz, ehdr);
+	  if (mod->symfile == NULL)
+	    translate_offs (mod->main_bias, mod, phnum, addrs, strsz, ehdr);
 
-	  /* Figure out the size of the symbol table.  */
-	  if (offs[i_hash] != 0)
-	    {
-	      /* In the original format, .hash says the size of .dynsym.  */
-
-	      size_t entsz = SH_ENTSIZE_HASH (ehdr);
-	      data = elf_getdata_rawchunk (mod->main.elf,
-					   offs[i_hash] + entsz, entsz,
-					   entsz == 4 ? ELF_T_WORD
-					   : ELF_T_XWORD);
-	      if (data != NULL)
-		mod->syments = (entsz == 4
-				? *(const GElf_Word *) data->d_buf
-				: *(const GElf_Xword *) data->d_buf);
-	    }
-	  if (offs[i_gnu_hash] != 0 && mod->syments == 0)
-	    {
-	      /* In the new format, we can derive it with some work.  */
-
-	      const struct
-	      {
-		Elf32_Word nbuckets;
-		Elf32_Word symndx;
-		Elf32_Word maskwords;
-		Elf32_Word shift2;
-	      } *header;
-
-	      data = elf_getdata_rawchunk (mod->main.elf, offs[i_gnu_hash],
-					   sizeof *header, ELF_T_WORD);
-	      if (data != NULL)
-		{
-		  header = data->d_buf;
-		  Elf32_Word nbuckets = header->nbuckets;
-		  Elf32_Word symndx = header->symndx;
-		  GElf_Off buckets_at = (offs[i_gnu_hash] + sizeof *header
-					 + (gelf_getclass (mod->main.elf)
-					    * sizeof (Elf32_Word)
-					    * header->maskwords));
-
-		  data = elf_getdata_rawchunk (mod->main.elf, buckets_at,
-					       nbuckets * sizeof (Elf32_Word),
-					       ELF_T_WORD);
-		  if (data != NULL && symndx < nbuckets)
-		    {
-		      const Elf32_Word *const buckets = data->d_buf;
-		      Elf32_Word maxndx = symndx;
-		      for (Elf32_Word bucket = 0; bucket < nbuckets; ++bucket)
-			if (buckets[bucket] > maxndx)
-			  maxndx = buckets[bucket];
-
-		      GElf_Off hasharr_at = (buckets_at
-					     + nbuckets * sizeof (Elf32_Word));
-		      hasharr_at += (maxndx - symndx) * sizeof (Elf32_Word);
-		      do
-			{
-			  data = elf_getdata_rawchunk (mod->main.elf,
-						       hasharr_at,
-						       sizeof (Elf32_Word),
-						       ELF_T_WORD);
-			  if (data != NULL
-			      && (*(const Elf32_Word *) data->d_buf & 1u))
-			    {
-			      mod->syments = maxndx + 1;
-			      break;
-			    }
-			  ++maxndx;
-			  hasharr_at += sizeof (Elf32_Word);
-			} while (data != NULL);
-		    }
-		}
-	    }
-	  if (offs[i_strtab] > offs[i_symtab] && mod->syments == 0)
-	    mod->syments = ((offs[i_strtab] - offs[i_symtab])
-			    / gelf_fsize (mod->main.elf,
-					  ELF_T_SYM, 1, EV_CURRENT));
-
-	  if (mod->syments > 0)
-	    {
-	      mod->symdata = elf_getdata_rawchunk (mod->main.elf,
-						   offs[i_symtab],
-						   gelf_fsize (mod->main.elf,
-							       ELF_T_SYM,
-							       mod->syments,
-							       EV_CURRENT),
-						   ELF_T_SYM);
-	      if (mod->symdata != NULL)
-		{
-		  mod->symstrdata = elf_getdata_rawchunk (mod->main.elf,
-							  offs[i_strtab],
-							  strsz,
-							  ELF_T_BYTE);
-		  if (mod->symstrdata == NULL)
-		    mod->symdata = NULL;
-		}
-	      if (mod->symdata == NULL)
-		mod->symerr = DWFL_E (LIBELF, elf_errno ());
-	      else
-		{
-		  mod->symfile = &mod->main;
-		  mod->symerr = DWFL_E_NOERROR;
-		}
-	      return;
-	    }
+	  return;
 	}
     }
 }
@@ -1059,28 +1123,83 @@ find_symtab (Dwfl_Module *mod)
   if (elf_strptr (mod->symfile->elf, strshndx, 0) == NULL)
     {
     elferr:
+      mod->symdata = NULL;
+      mod->syments = 0;
+      mod->first_global = 0;
       mod->symerr = DWFL_E (LIBELF, elf_errno ());
-      goto aux_cleanup;
+      goto aux_cleanup; /* This cleans up some more and tries find_dynsym.  */
     }
 
-  /* Cache the data; MOD->syments and MOD->first_global were set above.  */
+  /* Cache the data; MOD->syments and MOD->first_global were set
+     above.  If any of the sections is compressed, uncompress it
+     first.  Only the string data setion could theoretically be
+     compressed GNU style (as .zdebug_str).  Everything else only ELF
+     gabi style (SHF_COMPRESSED).  */
 
-  mod->symstrdata = elf_getdata (elf_getscn (mod->symfile->elf, strshndx),
-				 NULL);
-  if (mod->symstrdata == NULL)
+  Elf_Scn *symstrscn = elf_getscn (mod->symfile->elf, strshndx);
+  if (symstrscn == NULL)
+    goto elferr;
+
+  GElf_Shdr shdr_mem;
+  GElf_Shdr *shdr = gelf_getshdr (symstrscn, &shdr_mem);
+  if (shdr == NULL)
+    goto elferr;
+
+  size_t shstrndx;
+  if (elf_getshdrstrndx (mod->symfile->elf, &shstrndx) < 0)
+    goto elferr;
+
+  const char *sname = elf_strptr (mod->symfile->elf, shstrndx, shdr->sh_name);
+  if (sname == NULL)
+    goto elferr;
+
+  if (strncmp (sname, ".zdebug", strlen (".zdebug")) == 0)
+    /* Try to uncompress, but it might already have been, an error
+       might just indicate, already uncompressed.  */
+    elf_compress_gnu (symstrscn, 0, 0);
+
+  if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
+    if (elf_compress (symstrscn, 0, 0) < 0)
+      goto elferr;
+
+  mod->symstrdata = elf_getdata (symstrscn, NULL);
+  if (mod->symstrdata == NULL || mod->symstrdata->d_buf == NULL)
     goto elferr;
 
   if (xndxscn == NULL)
     mod->symxndxdata = NULL;
   else
     {
+      shdr = gelf_getshdr (xndxscn, &shdr_mem);
+      if (shdr == NULL)
+	goto elferr;
+
+      if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
+	if (elf_compress (xndxscn, 0, 0) < 0)
+	  goto elferr;
+
       mod->symxndxdata = elf_getdata (xndxscn, NULL);
-      if (mod->symxndxdata == NULL)
+      if (mod->symxndxdata == NULL || mod->symxndxdata->d_buf == NULL)
 	goto elferr;
     }
 
+  shdr = gelf_getshdr (symscn, &shdr_mem);
+  if (shdr == NULL)
+    goto elferr;
+
+  if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
+    if (elf_compress (symscn, 0, 0) < 0)
+      goto elferr;
+
   mod->symdata = elf_getdata (symscn, NULL);
-  if (mod->symdata == NULL)
+  if (mod->symdata == NULL || mod->symdata->d_buf == NULL)
+    goto elferr;
+
+  // Sanity check number of symbols.
+  shdr = gelf_getshdr (symscn, &shdr_mem);
+  if (shdr == NULL || shdr->sh_entsize == 0
+      || mod->syments > mod->symdata->d_size / shdr->sh_entsize
+      || (size_t) mod->first_global > mod->syments)
     goto elferr;
 
   /* Cache any auxiliary symbol info, when it fails, just ignore aux_sym.  */
@@ -1094,26 +1213,76 @@ find_symtab (Dwfl_Module *mod)
 	  mod->aux_syments = 0;
 	  elf_end (mod->aux_sym.elf);
 	  mod->aux_sym.elf = NULL;
+	  /* We thought we had something through shdrs, but it failed...
+	     Last ditch, look for dynamic symbols without section headers.  */
+	  find_dynsym (mod);
 	  return;
 	}
 
-      mod->aux_symstrdata = elf_getdata (elf_getscn (mod->aux_sym.elf,
-						     aux_strshndx),
-					 NULL);
-      if (mod->aux_symstrdata == NULL)
+      Elf_Scn *aux_strscn = elf_getscn (mod->aux_sym.elf, aux_strshndx);
+      if (aux_strscn == NULL)
+	goto elferr;
+
+      shdr = gelf_getshdr (aux_strscn, &shdr_mem);
+      if (shdr == NULL)
+	goto elferr;
+
+      size_t aux_shstrndx;
+      if (elf_getshdrstrndx (mod->aux_sym.elf, &aux_shstrndx) < 0)
+	goto elferr;
+
+      sname = elf_strptr (mod->aux_sym.elf, aux_shstrndx,
+				      shdr->sh_name);
+      if (sname == NULL)
+	goto elferr;
+
+      if (strncmp (sname, ".zdebug", strlen (".zdebug")) == 0)
+	/* Try to uncompress, but it might already have been, an error
+	   might just indicate, already uncompressed.  */
+	elf_compress_gnu (aux_strscn, 0, 0);
+
+      if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
+	if (elf_compress (aux_strscn, 0, 0) < 0)
+	  goto elferr;
+
+      mod->aux_symstrdata = elf_getdata (aux_strscn, NULL);
+      if (mod->aux_symstrdata == NULL || mod->aux_symstrdata->d_buf == NULL)
 	goto aux_cleanup;
 
       if (aux_xndxscn == NULL)
 	mod->aux_symxndxdata = NULL;
       else
 	{
+	  shdr = gelf_getshdr (aux_xndxscn, &shdr_mem);
+	  if (shdr == NULL)
+	    goto elferr;
+
+	  if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
+	    if (elf_compress (aux_xndxscn, 0, 0) < 0)
+	      goto elferr;
+
 	  mod->aux_symxndxdata = elf_getdata (aux_xndxscn, NULL);
-	  if (mod->aux_symxndxdata == NULL)
+	  if (mod->aux_symxndxdata == NULL
+	      || mod->aux_symxndxdata->d_buf == NULL)
 	    goto aux_cleanup;
 	}
 
+      shdr = gelf_getshdr (aux_symscn, &shdr_mem);
+      if (shdr == NULL)
+	goto elferr;
+
+      if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
+	if (elf_compress (aux_symscn, 0, 0) < 0)
+	  goto elferr;
+
       mod->aux_symdata = elf_getdata (aux_symscn, NULL);
-      if (mod->aux_symdata == NULL)
+      if (mod->aux_symdata == NULL || mod->aux_symdata->d_buf == NULL)
+	goto aux_cleanup;
+
+      // Sanity check number of aux symbols.
+      shdr = gelf_getshdr (aux_symscn, &shdr_mem);
+      if (mod->aux_syments > mod->aux_symdata->d_size / shdr->sh_entsize
+	  || (size_t) mod->aux_first_global > mod->aux_syments)
 	goto aux_cleanup;
     }
 }

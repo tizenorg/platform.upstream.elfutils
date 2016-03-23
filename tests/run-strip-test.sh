@@ -49,6 +49,13 @@ testrun ${abs_top_builddir}/src/unstrip -o testfile.unstrip testfile.temp testfi
 testrun ${abs_top_builddir}/src/elfcmp --hash-inexact $original testfile.unstrip
 }
 
+# Now strip in-place and make sure it is smaller.
+SIZE_original=$(stat -c%s $original)
+testrun ${abs_top_builddir}/src/strip $original
+SIZE_stripped=$(stat -c%s $original)
+test $SIZE_stripped -lt $SIZE_original ||
+  { echo "*** failure in-place strip file not smaller $original"; status=1; }
+
 tempfiles testfile.sections
 testrun ${abs_top_builddir}/src/readelf -S testfile.temp > testfile.sections || status=$?
 fgrep ' .debug_' testfile.sections && status=1

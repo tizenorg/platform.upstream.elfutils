@@ -1,5 +1,5 @@
 /* Keeping track of DWARF compilation units in libdwfl.
-   Copyright (C) 2005-2010 Red Hat, Inc.
+   Copyright (C) 2005-2010, 2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -162,13 +162,38 @@ cudie_offset (const struct dwfl_cu *cu)
 static int
 compare_cukey (const void *a, const void *b)
 {
-  return cudie_offset (a) - cudie_offset (b);
+  Dwarf_Off a_off = cudie_offset (a);
+  Dwarf_Off b_off = cudie_offset (b);
+  return (a_off < b_off) ? -1 : ((a_off > b_off) ? 1 : 0);
 }
 
 /* Intern the CU if necessary.  */
 static Dwfl_Error
 intern_cu (Dwfl_Module *mod, Dwarf_Off cuoff, struct dwfl_cu **result)
 {
+  if (unlikely (cuoff + 4 >= mod->dw->sectiondata[IDX_debug_info]->d_size))
+    {
+      if (likely (mod->lazycu == 1))
+	{
+	  /* This is the EOF marker.  Now we have interned all the CUs.
+	     One increment in MOD->lazycu counts not having hit EOF yet.  */
+	  *result = (void *) -1;
+	  less_lazy (mod);
+	  return DWFL_E_NOERROR;
+	}
+      else
+	{
+	  /* Unexpected EOF, most likely a bogus aranges.  */
+	  return (DWFL_E (LIBDW, DWARF_E_INVALID_DWARF));
+	}
+    }
+
+  /* Make sure the cuoff points to a real DIE.  */
+  Dwarf_Die cudie;
+  Dwarf_Die *die = INTUSE(dwarf_offdie) (mod->dw, cuoff, &cudie);
+  if (die == NULL)
+    return DWFL_E_LIBDW;
+
   struct Dwarf_CU dwkey;
   struct dwfl_cu key;
   key.die.cu = &dwkey;
@@ -180,51 +205,33 @@ intern_cu (Dwfl_Module *mod, Dwarf_Off cuoff, struct dwfl_cu **result)
 
   if (*found == &key || *found == NULL)
     {
-      if (unlikely (cuoff + 4 >= mod->dw->sectiondata[IDX_debug_info]->d_size))
+      /* This is a new entry, meaning we haven't looked at this CU.  */
+
+      *found = NULL;
+
+      struct dwfl_cu *cu = malloc (sizeof *cu);
+      if (unlikely (cu == NULL))
+	return DWFL_E_NOMEM;
+
+      cu->mod = mod;
+      cu->next = NULL;
+      cu->lines = NULL;
+      cu->die = cudie;
+
+      struct dwfl_cu **newvec = realloc (mod->cu, ((mod->ncu + 1)
+						   * sizeof (mod->cu[0])));
+      if (newvec == NULL)
 	{
-	  /* This is the EOF marker.  Now we have interned all the CUs.
-	     One increment in MOD->lazycu counts not having hit EOF yet.  */
-	  *found = (void *) -1l;
-	  less_lazy (mod);
+	  free (cu);
+	  return DWFL_E_NOMEM;
 	}
-      else
-	{
-	  /* This is a new entry, meaning we haven't looked at this CU.  */
+      mod->cu = newvec;
 
-	  *found = NULL;
+      mod->cu[mod->ncu++] = cu;
+      if (cu->die.cu->start == 0)
+	mod->first_cu = cu;
 
-	  struct dwfl_cu *cu = malloc (sizeof *cu);
-	  if (unlikely (cu == NULL))
-	    return DWFL_E_NOMEM;
-
-	  cu->mod = mod;
-	  cu->next = NULL;
-	  cu->lines = NULL;
-
-	  /* XXX use non-searching lookup */
-	  Dwarf_Die *die = INTUSE(dwarf_offdie) (mod->dw, cuoff, &cu->die);
-	  if (die == NULL)
-	    {
-	      free (cu);
-	      return DWFL_E_LIBDW;
-	    }
-	  assert (die == &cu->die);
-
-	  struct dwfl_cu **newvec = realloc (mod->cu, ((mod->ncu + 1)
-						       * sizeof (mod->cu[0])));
-	  if (newvec == NULL)
-	    {
-	      free (cu);
-	      return DWFL_E_NOMEM;
-	    }
-	  mod->cu = newvec;
-
-	  mod->cu[mod->ncu++] = cu;
-	  if (cu->die.cu->start == 0)
-	    mod->first_cu = cu;
-
-	  *found = cu;
-	}
+      *found = cu;
     }
 
   *result = *found;
@@ -273,7 +280,8 @@ __libdwfl_nextcu (Dwfl_Module *mod, struct dwfl_cu *lastcu,
       if (result != DWFL_E_NOERROR)
 	return result;
 
-      if ((*nextp)->next == NULL && nextoff == (Dwarf_Off) -1l)
+      if (*nextp != (void *) -1
+	  && (*nextp)->next == NULL && nextoff == (Dwarf_Off) -1l)
 	(*nextp)->next = (void *) -1l;
     }
 

@@ -1,5 +1,5 @@
 /* Generate ELF backend handle.
-   Copyright (C) 2000-2014 Red Hat, Inc.
+   Copyright (C) 2000-2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -135,6 +135,8 @@ static const struct
 };
 #define nmachines (sizeof (machines) / sizeof (machines[0]))
 
+/* No machine prefix should be larger than this.  */
+#define MAX_PREFIX_LEN 16
 
 /* Default callbacks.  Mostly they just return the error value.  */
 static const char *default_object_type_name (int ignore, char *buf,
@@ -186,7 +188,7 @@ static bool default_check_special_symbol (Elf *elf, GElf_Ehdr *ehdr,
 static bool default_check_st_other_bits (unsigned char st_other);
 static bool default_check_special_section (Ebl *, int,
 					   const GElf_Shdr *, const char *);
-static bool default_bss_plt_p (Elf *elf, GElf_Ehdr *ehdr);
+static bool default_bss_plt_p (Elf *elf);
 static int default_return_value_location (Dwarf_Die *functypedie,
 					  const Dwarf_Op **locops);
 static ssize_t default_register_info (Ebl *ebl,
@@ -252,10 +254,7 @@ fill_defaults (Ebl *result)
 
 /* Find an appropriate backend for the file associated with ELF.  */
 static Ebl *
-openbackend (elf, emulation, machine)
-     Elf *elf;
-     const char *emulation;
-     GElf_Half machine;
+openbackend (Elf *elf, const char *emulation, GElf_Half machine)
 {
   Ebl *result;
   size_t cnt;
@@ -343,7 +342,11 @@ openbackend (elf, emulation, machine)
 	    static const char version[] = MODVERSION;
 	    const char *modversion;
 	    ebl_bhinit_t initp;
-	    char symname[machines[cnt].prefix_len + sizeof "_init"];
+
+	    // We use a static number to help the compiler see we don't
+	    // overflow the stack with an arbitrary number.
+	    assert (machines[cnt].prefix_len <= MAX_PREFIX_LEN);
+	    char symname[MAX_PREFIX_LEN + sizeof "_init"];
 
 	    strcpy (mempcpy (symname, machines[cnt].prefix,
 			     machines[cnt].prefix_len), "_init");
@@ -391,8 +394,7 @@ openbackend (elf, emulation, machine)
 
 /* Find an appropriate backend for the file associated with ELF.  */
 Ebl *
-ebl_openbackend (elf)
-     Elf *elf;
+ebl_openbackend (Elf *elf)
 {
   GElf_Ehdr ehdr_mem;
   GElf_Ehdr *ehdr;
@@ -412,8 +414,7 @@ ebl_openbackend (elf)
 
 /* Find backend without underlying ELF file.  */
 Ebl *
-ebl_openbackend_machine (machine)
-     GElf_Half machine;
+ebl_openbackend_machine (GElf_Half machine)
 {
   return openbackend (NULL, NULL, machine);
 }
@@ -661,7 +662,9 @@ default_debugscn_p (const char *name)
   const size_t ndwarf_scn_names = (sizeof (dwarf_scn_names)
 				   / sizeof (dwarf_scn_names[0]));
   for (size_t cnt = 0; cnt < ndwarf_scn_names; ++cnt)
-    if (strcmp (name, dwarf_scn_names[cnt]) == 0)
+    if (strcmp (name, dwarf_scn_names[cnt]) == 0
+	|| (strncmp (name, ".zdebug", strlen (".zdebug")) == 0
+	    && strcmp (&name[2], &dwarf_scn_names[cnt][1]) == 0))
       return true;
 
   return false;
@@ -693,8 +696,7 @@ default_check_st_other_bits (unsigned char st_other __attribute__ ((unused)))
 
 
 static bool
-default_bss_plt_p (Elf *elf __attribute__ ((unused)),
-		   GElf_Ehdr *ehdr __attribute__ ((unused)))
+default_bss_plt_p (Elf *elf __attribute__ ((unused)))
 {
   return false;
 }

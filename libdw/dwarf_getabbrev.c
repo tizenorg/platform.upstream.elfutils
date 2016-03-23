@@ -1,5 +1,5 @@
 /* Get abbreviation at given offset.
-   Copyright (C) 2003, 2004, 2005, 2006 Red Hat, Inc.
+   Copyright (C) 2003, 2004, 2005, 2006, 2014 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2003.
 
@@ -31,19 +31,14 @@
 # include <config.h>
 #endif
 
-#include <assert.h>
 #include <dwarf.h>
 #include "libdwP.h"
 
 
 Dwarf_Abbrev *
 internal_function
-__libdw_getabbrev (dbg, cu, offset, lengthp, result)
-     Dwarf *dbg;
-     struct Dwarf_CU *cu;
-     Dwarf_Off offset;
-     size_t *lengthp;
-     Dwarf_Abbrev *result;
+__libdw_getabbrev (Dwarf *dbg, struct Dwarf_CU *cu, Dwarf_Off offset,
+		   size_t *lengthp, Dwarf_Abbrev *result)
 {
   /* Don't fail if there is not .debug_abbrev section.  */
   if (dbg->sectiondata[IDX_debug_abbrev] == NULL)
@@ -78,9 +73,11 @@ __libdw_getabbrev (dbg, cu, offset, lengthp, result)
      consists of two parts. The first part is an unsigned LEB128
      number representing the attribute's name. The second part is
      an unsigned LEB128 number representing the attribute's form.  */
+  const unsigned char *end = (dbg->sectiondata[IDX_debug_abbrev]->d_buf
+			      + dbg->sectiondata[IDX_debug_abbrev]->d_size);
   const unsigned char *start_abbrevp = abbrevp;
   unsigned int code;
-  get_uleb128 (code, abbrevp);
+  get_uleb128 (code, abbrevp, end);
 
   /* Check whether this code is already in the hash table.  */
   bool foundit = false;
@@ -97,7 +94,14 @@ __libdw_getabbrev (dbg, cu, offset, lengthp, result)
     {
       foundit = true;
 
-      assert (abb->offset == offset);
+      if (unlikely (abb->offset != offset))
+	{
+	  /* A duplicate abbrev code at a different offset,
+	     that should never happen.  */
+	invalid:
+	  __libdw_seterrno (DWARF_E_INVALID_DWARF);
+	  return NULL;
+	}
 
       /* If the caller doesn't need the length we are done.  */
       if (lengthp == NULL)
@@ -108,7 +112,11 @@ __libdw_getabbrev (dbg, cu, offset, lengthp, result)
      overwrite its content.  This must not be a problem, since the
      content better be the same.  */
   abb->code = code;
-  get_uleb128 (abb->tag, abbrevp);
+  if (abbrevp >= end)
+    goto invalid;
+  get_uleb128 (abb->tag, abbrevp, end);
+  if (abbrevp + 1 >= end)
+    goto invalid;
   abb->has_children = *abbrevp++ == DW_CHILDREN_yes;
   abb->attrp = (unsigned char *) abbrevp;
   abb->offset = offset;
@@ -119,8 +127,12 @@ __libdw_getabbrev (dbg, cu, offset, lengthp, result)
   unsigned int attrform;
   do
     {
-      get_uleb128 (attrname, abbrevp);
-      get_uleb128 (attrform, abbrevp);
+      if (abbrevp >= end)
+	goto invalid;
+      get_uleb128 (attrname, abbrevp, end);
+      if (abbrevp >= end)
+	goto invalid;
+      get_uleb128 (attrform, abbrevp, end);
     }
   while (attrname != 0 && attrform != 0 && ++abb->attrcnt);
 
@@ -138,10 +150,7 @@ __libdw_getabbrev (dbg, cu, offset, lengthp, result)
 
 
 Dwarf_Abbrev *
-dwarf_getabbrev (die, offset, lengthp)
-     Dwarf_Die *die;
-     Dwarf_Off offset;
-     size_t *lengthp;
+dwarf_getabbrev (Dwarf_Die *die, Dwarf_Off offset, size_t *lengthp)
 {
   return __libdw_getabbrev (die->cu->dbg, die->cu,
 			    die->cu->orig_abbrev_offset + offset, lengthp,

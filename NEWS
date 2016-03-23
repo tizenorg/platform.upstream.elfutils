@@ -1,3 +1,74 @@
+Version 0.165
+
+elfcompress: New utility to compress or decompress ELF sections.
+
+readelf: Add -z,--decompress option.
+
+libelf: Add elf_compress, elf_compress_gnu, elf32_getchdr, elf64_getchdr
+        and gelf_getchdr.
+
+libdwelf: New function dwelf_scn_gnu_compressed_size.
+
+config: Add libelf and libdw pkg-config files.
+
+backends: sparc support for core and live backtraces.
+
+translations: Updated Polish translation.
+
+Version 0.164
+
+strip, unstrip: Handle ELF files with merged strtab/shstrtab tables.
+                Handle missing SHF_INFO_LINK section flags.
+
+libelf: Use int64_t for offsets in libelf.h instead of loff_t.
+
+libdw: dwarf.h Add preliminary DWARF5 DW_LANG_Haskell.
+
+libdwfl: dwfl_standard_find_debuginfo now searches any subdir of the binary
+         path under the debuginfo root when the separate debug file couldn't
+         be found by build-id.
+         dwfl_linux_proc_attach can now be called before any Dwfl_Modules
+         have been reported.
+
+backends: Better sparc and sparc64 support.
+
+translations: Updated Ukrainian translation.
+
+Provide default-yama-scope subpackage.
+
+Version 0.163
+
+Bug fixes only, no new features.
+
+Version 0.162
+
+libdw: Install new header elfutils/known-dwarf.h.
+       dwarf.h Add preliminary DWARF5 constants DW_TAG_atomic_type,
+       DW_LANG_Fortran03, DW_LANG_Fortran08. dwarf_peel_type now also
+       handles DW_TAG_atomic_type.
+
+addr2line: Input addresses are now always interpreted as hexadecimal
+           numbers, never as octal or decimal numbers.
+           New option -a, --addresses to print address before each entry.
+           New option -C, --demangle to show demangled symbols.
+           New option --pretty-print to print all information on one line.
+
+ar: CVE-2014-9447 Directory traversal vulnerability in ar extraction.
+
+backends: x32 support.
+
+Version 0.161
+
+libdw: New function dwarf_peel_type. dwarf_aggregate_size now uses
+       dwarf_peel_type to also provide the sizes of qualified types.
+       dwarf_getmacros will now serve either of .debug_macro and
+       .debug_macinfo transparently.  New interfaces
+       dwarf_getmacros_off, dwarf_macro_getsrcfiles,
+       dwarf_macro_getparamcnt, and dwarf_macro_param are available
+       for more generalized inspection of macros and their parameters.
+       dwarf.h: Add DW_AT_GNU_deleted, DW_AT_noreturn, DW_LANG_C11,
+       DW_LANG_C_plus_plus_11 and DW_LANG_C_plus_plus_14.
+
 Version 0.160
 
 libdw: New functions dwarf_cu_getdwarf, dwarf_cu_die.

@@ -1,5 +1,5 @@
 /* Create descriptor from ELF descriptor for processing file.
-   Copyright (C) 2002-2011, 2014 Red Hat, Inc.
+   Copyright (C) 2002-2011, 2014, 2015 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2002.
 
@@ -43,13 +43,6 @@
 #include <fcntl.h>
 
 #include "libdwP.h"
-
-#if USE_ZLIB
-# include <endian.h>
-# define crc32		loser_crc32
-# include <zlib.h>
-# undef crc32
-#endif
 
 
 /* Section names.  */
@@ -109,7 +102,6 @@ check_section (Dwarf *result, GElf_Ehdr *ehdr, Elf_Scn *scn, bool inscngrp)
       /* The section name must be valid.  Otherwise is the ELF file
 	 invalid.  */
     err:
-      __libdw_free_zdata (result);
       Dwarf_Sig8_Hash_free (&result->sig8_hash);
       __libdw_seterrno (DWARF_E_INVALID_ELF);
       free (result);
@@ -118,98 +110,60 @@ check_section (Dwarf *result, GElf_Ehdr *ehdr, Elf_Scn *scn, bool inscngrp)
 
   /* Recognize the various sections.  Most names start with .debug_.  */
   size_t cnt;
+  bool gnu_compressed = false;
   for (cnt = 0; cnt < ndwarf_scnnames; ++cnt)
     if (strcmp (scnname, dwarf_scnnames[cnt]) == 0)
-      {
-	/* Found it.  Remember where the data is.  */
-	if (unlikely (result->sectiondata[cnt] != NULL))
-	  /* A section appears twice.  That's bad.  We ignore the section.  */
-	  break;
-
-	/* Get the section data.  */
-	Elf_Data *data = elf_getdata (scn, NULL);
-	if (data != NULL && data->d_size != 0)
-	  /* Yep, there is actually data available.  */
-	  result->sectiondata[cnt] = data;
-
-	break;
-      }
-#if USE_ZLIB
+      break;
     else if (scnname[0] == '.' && scnname[1] == 'z'
 	     && strcmp (&scnname[2], &dwarf_scnnames[cnt][1]) == 0)
       {
-	/* A compressed section.  */
-
-	if (unlikely (result->sectiondata[cnt] != NULL))
-	  /* A section appears twice.  That's bad.  We ignore the section.  */
-	  break;
-
-	/* Get the section data.  */
-	Elf_Data *data = elf_getdata (scn, NULL);
-	if (data != NULL && data->d_size != 0)
-	  {
-	    /* There is a 12-byte header of "ZLIB" followed by
-	       an 8-byte big-endian size.  */
-
-	    if (unlikely (data->d_size < 4 + 8)
-		|| unlikely (memcmp (data->d_buf, "ZLIB", 4) != 0))
-	      break;
-
-	    uint64_t size;
-	    memcpy (&size, data->d_buf + 4, sizeof size);
-	    size = be64toh (size);
-
-	    /* Check for unsigned overflow so malloc always allocated
-	       enough memory for both the Elf_Data header and the
-	       uncompressed section data.  */
-	    if (unlikely (sizeof (Elf_Data) + size < size))
-	      break;
-
-	    Elf_Data *zdata = malloc (sizeof (Elf_Data) + size);
-	    if (unlikely (zdata == NULL))
-	      break;
-
-	    zdata->d_buf = &zdata[1];
-	    zdata->d_type = ELF_T_BYTE;
-	    zdata->d_version = EV_CURRENT;
-	    zdata->d_size = size;
-	    zdata->d_off = 0;
-	    zdata->d_align = 1;
-
-	    z_stream z =
-	      {
-		.next_in = data->d_buf + 4 + 8,
-		.avail_in = data->d_size - 4 - 8,
-		.next_out = zdata->d_buf,
-		.avail_out = zdata->d_size
-	      };
-	    int zrc = inflateInit (&z);
-	    while (z.avail_in > 0 && likely (zrc == Z_OK))
-	      {
-		z.next_out = zdata->d_buf + (zdata->d_size - z.avail_out);
-		zrc = inflate (&z, Z_FINISH);
-		if (unlikely (zrc != Z_STREAM_END))
-		  {
-		    zrc = Z_DATA_ERROR;
-		    break;
-		  }
-		zrc = inflateReset (&z);
-	      }
-	    if (likely (zrc == Z_OK))
-	      zrc = inflateEnd (&z);
-
-	    if (unlikely (zrc != Z_OK) || unlikely (z.avail_out != 0))
-	      free (zdata);
-	    else
-	      {
-		result->sectiondata[cnt] = zdata;
-		result->sectiondata_gzip_mask |= 1U << cnt;
-	      }
-	  }
-
-	break;
+        gnu_compressed = true;
+        break;
       }
-#endif
+
+  if (cnt >= ndwarf_scnnames)
+    /* Not a debug section; ignore it. */
+    return result;
+
+  if (unlikely (result->sectiondata[cnt] != NULL))
+    /* A section appears twice.  That's bad.  We ignore the section.  */
+    return result;
+
+  /* We cannot know whether or not a GNU compressed section has already
+     been uncompressed or not, so ignore any errors.  */
+  if (gnu_compressed)
+    elf_compress_gnu (scn, 0, 0);
+
+  if ((shdr->sh_flags & SHF_COMPRESSED) != 0)
+    {
+      if (elf_compress (scn, 0, 0) < 0)
+	{
+	  /* If we failed to decompress the section and it's the
+	     debug_info section, then fail with specific error rather
+	     than the generic NO_DWARF. Without debug_info we can't do
+	     anything (see also valid_p()). */
+	  if (cnt == IDX_debug_info)
+	    {
+	      Dwarf_Sig8_Hash_free (&result->sig8_hash);
+	      __libdw_seterrno (DWARF_E_COMPRESSED_ERROR);
+	      free (result);
+	      return NULL;
+	    }
+	  return result;
+	}
+    }
+
+  /* Get the section data.  */
+  Elf_Data *data = elf_getdata (scn, NULL);
+  if (data == NULL)
+    goto err;
+
+  if (data->d_buf == NULL || data->d_size == 0)
+    /* No data actually available, ignore it. */
+    return result;
+
+  /* We can now read the section data into results. */
+  result->sectiondata[cnt] = data;
 
   return result;
 }
@@ -228,11 +182,31 @@ valid_p (Dwarf *result)
   if (likely (result != NULL)
       && unlikely (result->sectiondata[IDX_debug_info] == NULL))
     {
-      __libdw_free_zdata (result);
       Dwarf_Sig8_Hash_free (&result->sig8_hash);
       __libdw_seterrno (DWARF_E_NO_DWARF);
       free (result);
       result = NULL;
+    }
+
+  if (result != NULL && result->sectiondata[IDX_debug_loc] != NULL)
+    {
+      result->fake_loc_cu = (Dwarf_CU *) calloc (1, sizeof (Dwarf_CU));
+      if (unlikely (result->fake_loc_cu == NULL))
+	{
+	  Dwarf_Sig8_Hash_free (&result->sig8_hash);
+	  __libdw_seterrno (DWARF_E_NOMEM);
+	  free (result);
+	  result = NULL;
+	}
+      else
+	{
+	  result->fake_loc_cu->dbg = result;
+	  result->fake_loc_cu->startp
+	    = result->sectiondata[IDX_debug_loc]->d_buf;
+	  result->fake_loc_cu->endp
+	    = (result->sectiondata[IDX_debug_loc]->d_buf
+	       + result->sectiondata[IDX_debug_loc]->d_size);
+	}
     }
 
   return result;
@@ -254,13 +228,31 @@ global_read (Dwarf *result, Elf *elf, GElf_Ehdr *ehdr)
 static Dwarf *
 scngrp_read (Dwarf *result, Elf *elf, GElf_Ehdr *ehdr, Elf_Scn *scngrp)
 {
+  GElf_Shdr shdr_mem;
+  GElf_Shdr *shdr = gelf_getshdr (scngrp, &shdr_mem);
+  if (shdr == NULL)
+    {
+      Dwarf_Sig8_Hash_free (&result->sig8_hash);
+      __libdw_seterrno (DWARF_E_INVALID_ELF);
+      free (result);
+      return NULL;
+    }
+
+  if ((shdr->sh_flags & SHF_COMPRESSED) != 0
+      && elf_compress (scngrp, 0, 0) < 0)
+    {
+      Dwarf_Sig8_Hash_free (&result->sig8_hash);
+      __libdw_seterrno (DWARF_E_COMPRESSED_ERROR);
+      free (result);
+      return NULL;
+    }
+
   /* SCNGRP is the section descriptor for a section group which might
      contain debug sections.  */
   Elf_Data *data = elf_getdata (scngrp, NULL);
   if (data == NULL)
     {
       /* We cannot read the section content.  Fail!  */
-      __libdw_free_zdata (result);
       Dwarf_Sig8_Hash_free (&result->sig8_hash);
       free (result);
       return NULL;
@@ -277,7 +269,6 @@ scngrp_read (Dwarf *result, Elf *elf, GElf_Ehdr *ehdr, Elf_Scn *scngrp)
 	{
 	  /* A section group refers to a non-existing section.  Should
 	     never happen.  */
-	  __libdw_free_zdata (result);
 	  Dwarf_Sig8_Hash_free (&result->sig8_hash);
 	  __libdw_seterrno (DWARF_E_INVALID_ELF);
 	  free (result);
@@ -294,10 +285,7 @@ scngrp_read (Dwarf *result, Elf *elf, GElf_Ehdr *ehdr, Elf_Scn *scngrp)
 
 
 Dwarf *
-dwarf_begin_elf (elf, cmd, scngrp)
-     Elf *elf;
-     Dwarf_Cmd cmd;
-     Elf_Scn *scngrp;
+dwarf_begin_elf (Elf *elf, Dwarf_Cmd cmd, Elf_Scn *scngrp)
 {
   GElf_Ehdr *ehdr;
   GElf_Ehdr ehdr_mem;
@@ -318,6 +306,7 @@ dwarf_begin_elf (elf, cmd, scngrp)
 
   /* Default memory allocation size.  */
   size_t mem_default_size = sysconf (_SC_PAGESIZE) - 4 * sizeof (void *);
+  assert (sizeof (struct Dwarf) < mem_default_size);
 
   /* Allocate the data structure.  */
   Dwarf *result = (Dwarf *) calloc (1, sizeof (Dwarf) + mem_default_size);

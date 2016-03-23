@@ -1,5 +1,5 @@
 /* Interface for libebl.
-   Copyright (C) 2000-2010, 2013, 2014 Red Hat, Inc.
+   Copyright (C) 2000-2010, 2013, 2014, 2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -25,6 +25,19 @@
    You should have received copies of the GNU General Public License and
    the GNU Lesser General Public License along with this program.  If
    not, see <http://www.gnu.org/licenses/>.  */
+
+
+/* This is the interface for the Elfutils Backend Library.
+   It is a completely UNSUPPORTED interface.  Don't use any libebl
+   function directly.  These are only for internal elfutils backends
+   and tools.  There is NO source or binary compatible guarantee.
+
+   The ABI of the backend modules is not guaranteed.  Really, no guarantee
+   whatsoever.  We are enforcing this in the code.  The modules and their
+   users must match.  No third-party EBL module are supported or allowed.
+   The only reason there are separate modules is to not have the code for
+   all architectures in all the binaries.  */
+
 
 #ifndef _LIBEBL_H
 #define _LIBEBL_H 1
@@ -201,7 +214,7 @@ extern bool ebl_section_strip_p (Ebl *ebl, const GElf_Ehdr *ehdr,
 				 bool remove_comment, bool only_remove_debug);
 
 /* Check if backend uses a bss PLT in this file.  */
-extern bool ebl_bss_plt_p (Ebl *ebl, GElf_Ehdr *ehdr);
+extern bool ebl_bss_plt_p (Ebl *ebl);
 
 /* Return size of entry in SysV-style hash table.  */
 extern int ebl_sysvhash_entrysize (Ebl *ebl);
@@ -407,6 +420,12 @@ extern bool ebl_set_initial_registers_tid (Ebl *ebl,
 /* Number of registers to allocate for ebl_set_initial_registers_tid.
    EBL architecture can unwind iff EBL_FRAME_NREGS > 0.  */
 extern size_t ebl_frame_nregs (Ebl *ebl)
+  __nonnull_attribute__ (1);
+
+/* Offset to apply to the value of the return_address_register, as
+   fetched from a Dwarf CFI.  This is used by some backends, where the
+   return_address_register actually contains the call address.  */
+extern int ebl_ra_offset (Ebl *ebl)
   __nonnull_attribute__ (1);
 
 /* Mask to use for function symbol or unwind return addresses in case

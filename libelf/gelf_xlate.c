@@ -1,5 +1,5 @@
 /* Transformation functions for ELF data types.
-   Copyright (C) 1998,1999,2000,2002,2004,2005,2006,2007 Red Hat, Inc.
+   Copyright (C) 1998,1999,2000,2002,2004,2005,2006,2007,2015 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 1998.
 
@@ -52,7 +52,8 @@ static void
 (elf_cvt_Byte) (void *dest, const void *src, size_t n,
 		int encode __attribute__ ((unused)))
 {
-  memmove (dest, src, n);
+  if (n != 0)
+    memmove (dest, src, n);
 }
 
 
@@ -165,6 +166,7 @@ union unaligned
 #include "version_xlate.h"
 #include "gnuhash_xlate.h"
 #include "note_xlate.h"
+#include "chdr_xlate.h"
 
 
 /* Now the externally visible table with the function pointers.  */
@@ -197,7 +199,8 @@ const xfct_t __elf_xfctstom[EV_NUM - 1][EV_NUM - 1][ELFCLASSNUM - 1][ELF_T_NUM] 
 	[ELF_T_SYMINFO] = ElfW2(Bits, cvt_Syminfo),			      \
 	[ELF_T_MOVE]	= ElfW2(Bits, cvt_Move),			      \
 	[ELF_T_LIB]	= ElfW2(Bits, cvt_Lib),				      \
-	[ELF_T_AUXV]	= ElfW2(Bits, cvt_auxv_t)
+	[ELF_T_AUXV]	= ElfW2(Bits, cvt_auxv_t),			      \
+	[ELF_T_CHDR]	= ElfW2(Bits, cvt_chdr)
         define_xfcts (32),
 	[ELF_T_GNUHASH] = Elf32_cvt_Word
       },

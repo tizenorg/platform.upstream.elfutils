@@ -1,5 +1,5 @@
 /* Update data structures for changes.
-   Copyright (C) 2000-2010 Red Hat, Inc.
+   Copyright (C) 2000-2010, 2015 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2000.
 
@@ -84,8 +84,12 @@ ELFW(default_ehdr,LIBELFBITS) (Elf *elf, ElfW2(LIBELFBITS,Ehdr) *ehdr,
   update_if_changed (ehdr->e_ident[EI_VERSION], EV_CURRENT,
 		     elf->state.ELFW(elf,LIBELFBITS).ehdr_flags);
 
-  if (unlikely (ehdr->e_version == EV_NONE)
-      || unlikely (ehdr->e_version >= EV_NUM))
+  if (unlikely (ehdr->e_version == EV_NONE))
+    {
+      ehdr->e_version = EV_CURRENT;
+      elf->state.ELFW(elf,LIBELFBITS).ehdr_flags |= ELF_F_DIRTY;
+    }
+  else if (unlikely (ehdr->e_version >= EV_NUM))
     {
       __libelf_seterrno (ELF_E_UNKNOWN_VERSION);
       return 1;
@@ -103,6 +107,14 @@ ELFW(default_ehdr,LIBELFBITS) (Elf *elf, ElfW2(LIBELFBITS,Ehdr) *ehdr,
   if (unlikely (ehdr->e_ehsize != elf_typesize (LIBELFBITS, ELF_T_EHDR, 1)))
     {
       ehdr->e_ehsize = elf_typesize (LIBELFBITS, ELF_T_EHDR, 1);
+      elf->state.ELFW(elf,LIBELFBITS).ehdr_flags |= ELF_F_DIRTY;
+    }
+
+  /* If phnum is zero make sure e_phoff is also zero and not some random
+     value.  That would cause trouble in update_file.  */
+  if (ehdr->e_phnum == 0 && ehdr->e_phoff != 0)
+    {
+      ehdr->e_phoff = 0;
       elf->state.ELFW(elf,LIBELFBITS).ehdr_flags |= ELF_F_DIRTY;
     }
 
@@ -202,6 +214,11 @@ __elfw2(LIBELFBITS,updatenull_wrlock) (Elf *elf, int *change_bop, size_t shnum)
 	      assert (shdr != NULL);
 	      ElfW2(LIBELFBITS,Word) sh_entsize = shdr->sh_entsize;
 	      ElfW2(LIBELFBITS,Word) sh_align = shdr->sh_addralign ?: 1;
+	      if (unlikely (! powerof2 (sh_align)))
+		{
+		  __libelf_seterrno (ELF_E_INVALID_ALIGN);
+		  return -1;
+		}
 
 	      /* Set the sh_entsize value if we can reliably detect it.  */
 	      switch (shdr->sh_type)
@@ -318,9 +335,8 @@ __elfw2(LIBELFBITS,updatenull_wrlock) (Elf *elf, int *change_bop, size_t shnum)
 	      if (elf->flags & ELF_F_LAYOUT)
 		{
 		  size = MAX ((GElf_Word) size,
-			      shdr->sh_offset
-			      + (shdr->sh_type != SHT_NOBITS
-				 ? shdr->sh_size : 0));
+			      (shdr->sh_type != SHT_NOBITS
+			       ? shdr->sh_offset + shdr->sh_size : 0));
 
 		  /* The alignment must be a power of two.  This is a
 		     requirement from the ELF specification.  Additionally
@@ -328,7 +344,7 @@ __elfw2(LIBELFBITS,updatenull_wrlock) (Elf *elf, int *change_bop, size_t shnum)
 		     enough for the largest alignment required by a data
 		     block.  */
 		  if (unlikely (! powerof2 (shdr->sh_addralign))
-		      || unlikely (shdr->sh_addralign < sh_align))
+		      || unlikely ((shdr->sh_addralign ?: 1) < sh_align))
 		    {
 		      __libelf_seterrno (ELF_E_INVALID_ALIGN);
 		      return -1;
@@ -366,12 +382,27 @@ __elfw2(LIBELFBITS,updatenull_wrlock) (Elf *elf, int *change_bop, size_t shnum)
 
 	      /* Check that the section size is actually a multiple of
 		 the entry size.  */
-	      if (shdr->sh_entsize != 0
-		  && unlikely (shdr->sh_size % shdr->sh_entsize != 0)
+	      if (shdr->sh_entsize != 0 && shdr->sh_entsize != 1
 		  && (elf->flags & ELF_F_PERMISSIVE) == 0)
 		{
-		  __libelf_seterrno (ELF_E_INVALID_SHENTSIZE);
-		  return -1;
+		  /* For compressed sections check the uncompressed size.  */
+		  ElfW2(LIBELFBITS,Word) sh_size;
+		  if ((shdr->sh_flags & SHF_COMPRESSED) == 0)
+		    sh_size = shdr->sh_size;
+		  else
+		    {
+		      ElfW2(LIBELFBITS,Chdr) *chdr;
+		      chdr = elfw2(LIBELFBITS,getchdr) (scn);
+		      if (unlikely (chdr == NULL))
+			return -1;
+		      sh_size = chdr->ch_size;
+		    }
+
+		  if (unlikely (sh_size % shdr->sh_entsize != 0))
+		    {
+		      __libelf_seterrno (ELF_E_INVALID_SHENTSIZE);
+		      return -1;
+		    }
 		}
 	    }
 
@@ -382,6 +413,8 @@ __elfw2(LIBELFBITS,updatenull_wrlock) (Elf *elf, int *change_bop, size_t shnum)
       while ((list = list->next) != NULL);
 
       /* Store section information.  */
+      update_if_changed (ehdr->e_shentsize,
+			 elf_typesize (LIBELFBITS, ELF_T_SHDR, 1), ehdr_flags);
       if (elf->flags & ELF_F_LAYOUT)
 	{
 	  /* The user is supposed to fill out e_shoff.  Use it and
@@ -402,9 +435,6 @@ __elfw2(LIBELFBITS,updatenull_wrlock) (Elf *elf, int *change_bop, size_t shnum)
 	  size = (size + SHDR_ALIGN - 1) & ~(SHDR_ALIGN - 1);
 
 	  update_if_changed (ehdr->e_shoff, (GElf_Word) size, elf->flags);
-	  update_if_changed (ehdr->e_shentsize,
-			     elf_typesize (LIBELFBITS, ELF_T_SHDR, 1),
-			     ehdr_flags);
 
 	  /* Account for the section header size.  */
 	  size += elf_typesize (LIBELFBITS, ELF_T_SHDR, shnum);

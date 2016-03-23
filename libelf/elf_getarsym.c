@@ -1,5 +1,5 @@
 /* Return symbol table of archive.
-   Copyright (C) 1998-2000, 2002, 2005, 2009, 2012, 2014 Red Hat, Inc.
+   Copyright (C) 1998-2000, 2002, 2005, 2009, 2012, 2014, 2015 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 1998.
 
@@ -74,9 +74,7 @@ read_number_entries (uint64_t *nump, Elf *elf, size_t *offp, bool index64_p)
 }
 
 Elf_Arsym *
-elf_getarsym (elf, ptr)
-     Elf *elf;
-     size_t *ptr;
+elf_getarsym (Elf *elf, size_t *ptr)
 {
   if (elf->kind != ELF_K_AR)
     {
@@ -105,6 +103,9 @@ elf_getarsym (elf, ptr)
 
       /* In case we find no index remember this for the next call.  */
       elf->state.ar.ar_sym = (Elf_Arsym *) -1l;
+
+      /* We might have to allocate some temporary data for reading.  */
+      void *temp_data = NULL;
 
       struct ar_hdr *index_hdr;
       if (elf->map_address == NULL)
@@ -182,11 +183,12 @@ elf_getarsym (elf, ptr)
       tmpbuf[10] = '\0';
       size_t index_size = atol (tmpbuf);
 
-      if (SARMAG + sizeof (struct ar_hdr) + index_size > elf->maximum_size
+      if (index_size > elf->maximum_size
+	  || elf->maximum_size - index_size < SARMAG + sizeof (struct ar_hdr)
 #if SIZE_MAX <= 4294967295U
 	  || n >= SIZE_MAX / sizeof (Elf_Arsym)
 #endif
-	  || n * w > index_size)
+	  || n > index_size / w)
 	{
 	  /* This index table cannot be right since it does not fit into
 	     the file.  */
@@ -199,17 +201,19 @@ elf_getarsym (elf, ptr)
       elf->state.ar.ar_sym = (Elf_Arsym *) malloc (ar_sym_len);
       if (elf->state.ar.ar_sym != NULL)
 	{
-	  union
-	  {
-	    uint32_t u32[n];
-	    uint64_t u64[n];
-	  } *file_data;
+	  void *file_data; /* unit32_t[n] or uint64_t[n] */
 	  char *str_data;
 	  size_t sz = n * w;
 
 	  if (elf->map_address == NULL)
 	    {
-	      file_data = alloca (sz);
+	      temp_data = malloc (sz);
+	      if (unlikely (temp_data == NULL))
+		{
+		  __libelf_seterrno (ELF_E_NOMEM);
+		  goto out;
+		}
+	      file_data = temp_data;
 
 	      ar_sym_len += index_size - n * w;
 	      Elf_Arsym *newp = (Elf_Arsym *) realloc (elf->state.ar.ar_sym,
@@ -245,18 +249,28 @@ elf_getarsym (elf, ptr)
 	      file_data = (void *) (elf->map_address + off);
 	      if (!ALLOW_UNALIGNED
 		  && ((uintptr_t) file_data & -(uintptr_t) n) != 0)
-		file_data = memcpy (alloca (sz), elf->map_address + off, sz);
+		{
+		  temp_data = malloc (sz);
+		  if (unlikely (temp_data == NULL))
+		    {
+		      __libelf_seterrno (ELF_E_NOMEM);
+		      goto out;
+		    }
+		  file_data = memcpy (temp_data, elf->map_address + off, sz);
+		}
 	      str_data = (char *) (elf->map_address + off + sz);
 	    }
 
 	  /* Now we can build the data structure.  */
 	  Elf_Arsym *arsym = elf->state.ar.ar_sym;
+	  uint64_t (*u64)[n] = file_data;
+	  uint32_t (*u32)[n] = file_data;
 	  for (size_t cnt = 0; cnt < n; ++cnt)
 	    {
 	      arsym[cnt].as_name = str_data;
 	      if (index64_p)
 		{
-		  uint64_t tmp = file_data->u64[cnt];
+		  uint64_t tmp = (*u64)[cnt];
 		  if (__BYTE_ORDER == __LITTLE_ENDIAN)
 		    tmp = bswap_64 (tmp);
 
@@ -278,9 +292,9 @@ elf_getarsym (elf, ptr)
 		    }
 		}
 	      else if (__BYTE_ORDER == __LITTLE_ENDIAN)
-		arsym[cnt].as_off = bswap_32 (file_data->u32[cnt]);
+		arsym[cnt].as_off = bswap_32 ((*u32)[cnt]);
 	      else
-		arsym[cnt].as_off = file_data->u32[cnt];
+		arsym[cnt].as_off = (*u32)[cnt];
 
 	      arsym[cnt].as_hash = _dl_elf_hash (str_data);
 	      str_data = rawmemchr (str_data, '\0') + 1;
@@ -298,6 +312,7 @@ elf_getarsym (elf, ptr)
       result = elf->state.ar.ar_sym;
 
     out:
+      free (temp_data);
       rwlock_unlock (elf->lock);
     }
 

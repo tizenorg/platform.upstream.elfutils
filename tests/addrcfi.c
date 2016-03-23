@@ -1,5 +1,5 @@
 /* Test program for CFI handling.
-   Copyright (C) 2009-2010, 2013 Red Hat, Inc.
+   Copyright (C) 2009-2010, 2013, 2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -34,11 +34,9 @@ op_name (unsigned int code)
 {
   static const char *const known[] =
     {
-#define ONE_KNOWN_DW_OP_DESC(NAME, CODE, DESC) ONE_KNOWN_DW_OP (NAME, CODE)
-#define ONE_KNOWN_DW_OP(NAME, CODE) [CODE] = #NAME,
-      ALL_KNOWN_DW_OP
-#undef ONE_KNOWN_DW_OP
-#undef ONE_KNOWN_DW_OP_DESC
+#define DWARF_ONE_KNOWN_DW_OP(NAME, CODE) [CODE] = #NAME,
+      DWARF_ALL_KNOWN_DW_OP
+#undef DWARF_ONE_KNOWN_DW_OP
     };
 
   if (likely (code < sizeof (known) / sizeof (known[0])))
@@ -162,10 +160,19 @@ handle_address (GElf_Addr pc, Dwfl *dwfl)
   Dwfl_Module *mod = dwfl_addrmodule (dwfl, pc);
 
   struct stuff stuff;
-  return (handle_cfi (dwfl, ".eh_frame",
-		      dwfl_module_eh_cfi (mod, &stuff.bias), pc, &stuff)
-	  & handle_cfi (dwfl, ".debug_frame",
-			dwfl_module_dwarf_cfi (mod, &stuff.bias), pc, &stuff));
+  stuff.frame = NULL;
+  stuff.bias = 0;
+  int res = handle_cfi (dwfl, ".eh_frame",
+			dwfl_module_eh_cfi (mod, &stuff.bias), pc, &stuff);
+  free (stuff.frame);
+
+  stuff.frame = NULL;
+  stuff.bias = 0;
+  res &= handle_cfi (dwfl, ".debug_frame",
+		     dwfl_module_dwarf_cfi (mod, &stuff.bias), pc, &stuff);
+  free (stuff.frame);
+
+  return res;
 }
 
 int

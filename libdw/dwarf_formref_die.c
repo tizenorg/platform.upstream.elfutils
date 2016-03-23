@@ -36,9 +36,7 @@
 
 
 Dwarf_Die *
-dwarf_formref_die (attr, result)
-     Dwarf_Attribute *attr;
-     Dwarf_Die *result;
+dwarf_formref_die (Dwarf_Attribute *attr, Dwarf_Die *result)
 {
   if (attr == NULL)
     return NULL;
@@ -70,7 +68,8 @@ dwarf_formref_die (attr, result)
       return INTUSE(dwarf_offdie) (dbg_ret, offset, result);
     }
 
-  Elf_Data *data;
+  const unsigned char *datap;
+  size_t size;
   if (attr->form == DW_FORM_ref_sig8)
     {
       /* This doesn't have an offset, but instead a value we
@@ -92,8 +91,9 @@ dwarf_formref_die (attr, result)
 	  }
 	while (cu->type_sig8 != sig);
 
-      data = cu->dbg->sectiondata[IDX_debug_types];
-      offset = cu->type_offset;
+      datap = cu->dbg->sectiondata[IDX_debug_types]->d_buf;
+      size = cu->dbg->sectiondata[IDX_debug_types]->d_size;
+      offset = cu->start + cu->type_offset;
     }
   else
     {
@@ -101,17 +101,18 @@ dwarf_formref_die (attr, result)
       if (unlikely (__libdw_formref (attr, &offset) != 0))
 	return NULL;
 
-      data = cu_data (cu);
+      datap = cu->startp;
+      size = cu->endp - cu->startp;
     }
 
-  if (unlikely (data->d_size - cu->start <= offset))
+  if (unlikely (offset >= size))
     {
       __libdw_seterrno (DWARF_E_INVALID_DWARF);
       return NULL;
     }
 
   memset (result, '\0', sizeof (Dwarf_Die));
-  result->addr = (char *) data->d_buf + cu->start + offset;
+  result->addr = (char *) datap + offset;
   result->cu = cu;
   return result;
 }

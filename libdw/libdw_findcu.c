@@ -1,5 +1,5 @@
 /* Find CU for given offset.
-   Copyright (C) 2003-2010 Red Hat, Inc.
+   Copyright (C) 2003-2010, 2014 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2003.
 
@@ -63,9 +63,7 @@ findcu_cb (const void *arg1, const void *arg2)
 
 struct Dwarf_CU *
 internal_function
-__libdw_intern_next_unit (dbg, debug_types)
-     Dwarf *dbg;
-     bool debug_types;
+__libdw_intern_next_unit (Dwarf *dbg, bool debug_types)
 {
   Dwarf_Off *const offsetp
     = debug_types ? &dbg->next_tu_offset : &dbg->next_cu_offset;
@@ -94,6 +92,12 @@ __libdw_intern_next_unit (dbg, debug_types)
       return NULL;
     }
 
+  /* Invalid or truncated debug section data?  */
+  Elf_Data *data = dbg->sectiondata[debug_types
+				    ? IDX_debug_types : IDX_debug_info];
+  if (unlikely (*offsetp > data->d_size))
+    *offsetp = data->d_size;
+
   /* Create an entry for this CU.  */
   struct Dwarf_CU *newp = libdw_typed_alloc (dbg, struct Dwarf_CU);
 
@@ -113,6 +117,9 @@ __libdw_intern_next_unit (dbg, debug_types)
   if (debug_types)
     Dwarf_Sig8_Hash_insert (&dbg->sig8_hash, type_sig8, newp);
 
+  newp->startp = data->d_buf + newp->start;
+  newp->endp = data->d_buf + newp->end;
+
   /* Add the new entry to the search tree.  */
   if (tsearch (newp, tree, findcu_cb) == NULL)
     {
@@ -126,10 +133,8 @@ __libdw_intern_next_unit (dbg, debug_types)
 }
 
 struct Dwarf_CU *
-__libdw_findcu (dbg, start, debug_types)
-     Dwarf *dbg;
-     Dwarf_Off start;
-     bool debug_types;
+internal_function
+__libdw_findcu (Dwarf *dbg, Dwarf_Off start, bool debug_types)
 {
   void **tree = debug_types ? &dbg->tu_tree : &dbg->cu_tree;
   Dwarf_Off *next_offset

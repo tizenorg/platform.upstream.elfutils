@@ -1,5 +1,5 @@
 /* Get function information.
-   Copyright (C) 2005, 2013 Red Hat, Inc.
+   Copyright (C) 2005, 2013, 2015 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2005.
 
@@ -103,12 +103,13 @@ dwarf_getfuncs (Dwarf_Die *cudie, int (*callback) (Dwarf_Die *, void *),
   int lang = INTUSE(dwarf_srclang) (cudie);
   bool c_cu = (lang == DW_LANG_C89
 	       || lang == DW_LANG_C
-	       || lang == DW_LANG_C99);
+	       || lang == DW_LANG_C99
+	       || lang == DW_LANG_C11);
 
   struct visitor_info v = { callback, arg, (void *) offset, NULL, c_cu };
   struct Dwarf_Die_Chain chain = { .die = CUDIE (cudie->cu),
 				   .parent = NULL };
-  int res = __libdw_visit_scopes (0, &chain, &tree_visitor, NULL, &v);
+  int res = __libdw_visit_scopes (0, &chain, NULL, &tree_visitor, NULL, &v);
 
   if (res == DWARF_CB_ABORT)
     return (ptrdiff_t) v.last_addr;

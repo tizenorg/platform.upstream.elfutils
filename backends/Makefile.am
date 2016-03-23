@@ -58,7 +58,7 @@ am_libebl_sh_pic_a_OBJECTS = $(sh_SRCS:.c=.os)
 
 x86_64_SRCS = x86_64_init.c x86_64_symbol.c x86_64_corenote.c x86_64_cfi.c \
 	      x86_64_retval.c x86_64_regs.c i386_auxv.c x86_64_syscall.c \
-	      x86_64_initreg.c
+	      x86_64_initreg.c x32_corenote.c
 cpu_x86_64 = ../libcpu/libcpu_x86_64.a
 libebl_x86_64_pic_a_SOURCES = $(x86_64_SRCS)
 am_libebl_x86_64_pic_a_OBJECTS = $(x86_64_SRCS:.c=.os)
@@ -84,7 +84,8 @@ libebl_aarch64_pic_a_SOURCES = $(aarch64_SRCS)
 am_libebl_aarch64_pic_a_OBJECTS = $(aarch64_SRCS:.c=.os)
 
 sparc_SRCS = sparc_init.c sparc_symbol.c sparc_regs.c sparc_retval.c \
-	     sparc_corenote.c sparc64_corenote.c sparc_auxv.c
+	     sparc_corenote.c sparc64_corenote.c sparc_auxv.c sparc_attrs.c \
+             sparc_cfi.c sparc_initreg.c
 libebl_sparc_pic_a_SOURCES = $(sparc_SRCS)
 am_libebl_sparc_pic_a_OBJECTS = $(sparc_SRCS:.c=.os)
 
@@ -114,13 +115,13 @@ am_libebl_tilegx_pic_a_OBJECTS = $(tilegx_SRCS:.c=.os)
 
 libebl_%.so libebl_%.map: libebl_%_pic.a $(libelf) $(libdw)
 	@rm -f $(@:.so=.map)
-	echo 'ELFUTILS_$(PACKAGE_VERSION) { global: $*_init; local: *; };' \
+	$(AM_V_at)echo 'ELFUTILS_$(PACKAGE_VERSION) { global: $*_init; local: *; };' \
 	  > $(@:.so=.map)
-	$(LINK) -shared -o $(@:.map=.so) \
+	$(AM_V_CCLD)$(LINK) -shared -o $(@:.map=.so) \
 		-Wl,--whole-archive $< $(cpu_$*) -Wl,--no-whole-archive \
 		-Wl,--version-script,$(@:.so=.map) \
 		-Wl,-z,defs -Wl,--as-needed $(libelf) $(libdw)
-	$(textrel_check)
+	@$(textrel_check)
 
 libebl_i386.so: $(cpu_i386)
 libebl_x86_64.so: $(cpu_x86_64)

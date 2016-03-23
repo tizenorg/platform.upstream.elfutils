@@ -1,5 +1,5 @@
 /* Advance to next CFI entry.
-   Copyright (C) 2009-2010 Red Hat, Inc.
+   Copyright (C) 2009-2010, 2014 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -37,13 +37,12 @@
 
 
 int
-dwarf_next_cfi (e_ident, data, eh_frame_p, off, next_off, entry)
-     const unsigned char e_ident[];
-     Elf_Data *data;
-     bool eh_frame_p;
-     Dwarf_Off off;
-     Dwarf_Off *next_off;
-     Dwarf_CFI_Entry *entry;
+dwarf_next_cfi (const unsigned char e_ident[],
+		Elf_Data *data,
+		bool eh_frame_p,
+		Dwarf_Off off,
+		Dwarf_Off *next_off,
+		Dwarf_CFI_Entry *entry)
 {
   /* Dummy struct for memory-access.h macros.  */
   BYTE_ORDER_DUMMY (dw, e_ident);
@@ -170,11 +169,19 @@ dwarf_next_cfi (e_ident, data, eh_frame_p, off, next_off, entry)
 	  bytes += address_size;
 	}
 
-      get_uleb128 (entry->cie.code_alignment_factor, bytes);
-      get_sleb128 (entry->cie.data_alignment_factor, bytes);
+      if (bytes >= limit)
+	goto invalid;
+      get_uleb128 (entry->cie.code_alignment_factor, bytes, limit);
+
+      if (bytes >= limit)
+	goto invalid;
+      get_sleb128 (entry->cie.data_alignment_factor, bytes, limit);
+
+      if (bytes >= limit)
+	goto invalid;
 
       if (version >= 3)		/* DWARF 3+ */
-	get_uleb128 (entry->cie.return_address_register, bytes);
+	get_uleb128 (entry->cie.return_address_register, bytes, limit);
       else			/* DWARF 2 */
 	entry->cie.return_address_register = *bytes++;
 
@@ -184,7 +191,9 @@ dwarf_next_cfi (e_ident, data, eh_frame_p, off, next_off, entry)
       bool sized_augmentation = *ap == 'z';
       if (sized_augmentation)
 	{
-	  get_uleb128 (entry->cie.augmentation_data_size, bytes);
+	  if (bytes >= limit)
+	    goto invalid;
+	  get_uleb128 (entry->cie.augmentation_data_size, bytes, limit);
 	  if ((Dwarf_Word) (limit - bytes) < entry->cie.augmentation_data_size)
 	    goto invalid;
 	  entry->cie.augmentation_data = bytes;

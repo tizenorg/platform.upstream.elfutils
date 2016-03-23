@@ -1,5 +1,5 @@
 /* CFI program execution.
-   Copyright (C) 2009-2010 Red Hat, Inc.
+   Copyright (C) 2009-2010, 2014, 2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -56,6 +56,46 @@ duplicate_frame_state (const Dwarf_Frame *original,
   return copy;
 }
 
+static inline bool
+enough_registers (Dwarf_Word reg, Dwarf_Frame **pfs, int *result)
+{
+  /* Don't allow insanely large register numbers.  268435456 registers
+     should be enough for anybody.  And very large values might overflow
+     the array size and offsetof calculations below.  */
+  if (unlikely (reg >= INT32_MAX / sizeof ((*pfs)->regs[0])))
+    {
+      *result = DWARF_E_INVALID_CFI;
+      return false;
+    }
+
+  if ((*pfs)->nregs <= reg)
+    {
+       size_t size = offsetof (Dwarf_Frame, regs[reg + 1]);
+       Dwarf_Frame *bigger = realloc (*pfs, size);
+       if (unlikely (bigger == NULL))
+         {
+           *result = DWARF_E_NOMEM;
+           return false;
+         }
+       else
+         {
+           eu_static_assert (reg_unspecified == 0);
+           memset (bigger->regs + bigger->nregs, 0,
+                   (reg + 1 - bigger->nregs) * sizeof bigger->regs[0]);
+           bigger->nregs = reg + 1;
+           *pfs = bigger;
+         }
+     }
+  return true;
+}
+
+static inline void
+require_cfa_offset (Dwarf_Frame *fs)
+{
+  if (unlikely (fs->cfa_rule != cfa_offset))
+    fs->cfa_rule = cfa_invalid;
+}
+
 /* Returns a DWARF_E_* error code, usually NOERROR or INVALID_CFI.
    Frees *STATE on failure.  */
 static int
@@ -77,37 +117,9 @@ execute_cfi (Dwarf_CFI *cache,
   } while (0)
 
   Dwarf_Frame *fs = *state;
-  inline bool enough_registers (Dwarf_Word reg)
-    {
-      if (fs->nregs <= reg)
-	{
-	  size_t size = offsetof (Dwarf_Frame, regs[reg + 1]);
-	  Dwarf_Frame *bigger = realloc (fs, size);
-	  if (unlikely (bigger == NULL))
-	    {
-	      result = DWARF_E_NOMEM;
-	      return false;
-	    }
-	  else
-	    {
-	      eu_static_assert (reg_unspecified == 0);
-	      memset (bigger->regs + bigger->nregs, 0,
-		      (reg + 1 - bigger->nregs) * sizeof bigger->regs[0]);
-	      bigger->nregs = reg + 1;
-	      fs = bigger;
-	    }
-	}
-      return true;
-    }
-
-  inline void require_cfa_offset (void)
-  {
-    if (unlikely (fs->cfa_rule != cfa_offset))
-      fs->cfa_rule = cfa_invalid;
-  }
 
 #define register_rule(regno, r_rule, r_value) do {	\
-    if (unlikely (! enough_registers (regno)))		\
+    if (unlikely (! enough_registers (regno, &fs, &result)))	\
       goto out;						\
     fs->regs[regno].rule = reg_##r_rule;		\
     fs->regs[regno].value = (r_value);			\
@@ -132,12 +144,15 @@ execute_cfi (Dwarf_CFI *cache,
 	  break;
 
 	case DW_CFA_advance_loc2:
+	  cfi_assert (program + 2 <= end);
 	  operand = read_2ubyte_unaligned_inc (cache, program);
 	  goto advance_loc;
 	case DW_CFA_advance_loc4:
+	  cfi_assert (program + 4 <= end);
 	  operand = read_4ubyte_unaligned_inc (cache, program);
 	  goto advance_loc;
 	case DW_CFA_MIPS_advance_loc8:
+	  cfi_assert (program + 8 <= end);
 	  operand = read_8ubyte_unaligned_inc (cache, program);
 	  goto advance_loc;
 
@@ -153,8 +168,9 @@ execute_cfi (Dwarf_CFI *cache,
 	     switch block for the row-copying (LOC-moving) cases above.  */
 
 	case DW_CFA_def_cfa:
-	  get_uleb128 (operand, program);
-	  get_uleb128 (offset, program);
+	  get_uleb128 (operand, program, end);
+	  cfi_assert (program < end);
+	  get_uleb128 (offset, program, end);
 	def_cfa:
 	  fs->cfa_rule = cfa_offset;
 	  fs->cfa_val_reg = operand;
@@ -165,32 +181,33 @@ execute_cfi (Dwarf_CFI *cache,
 	  continue;
 
 	case DW_CFA_def_cfa_register:
-	  get_uleb128 (regno, program);
-	  require_cfa_offset ();
+	  get_uleb128 (regno, program, end);
+	  require_cfa_offset (fs);
 	  fs->cfa_val_reg = regno;
 	  continue;
 
 	case DW_CFA_def_cfa_sf:
-	  get_uleb128 (operand, program);
-	  get_sleb128 (sf_offset, program);
+	  get_uleb128 (operand, program, end);
+	  cfi_assert (program < end);
+	  get_sleb128 (sf_offset, program, end);
 	  offset = sf_offset * cie->data_alignment_factor;
 	  goto def_cfa;
 
 	case DW_CFA_def_cfa_offset:
-	  get_uleb128 (offset, program);
+	  get_uleb128 (offset, program, end);
 	def_cfa_offset:
-	  require_cfa_offset ();
+	  require_cfa_offset (fs);
 	  fs->cfa_val_offset = offset;
 	  continue;
 
 	case DW_CFA_def_cfa_offset_sf:
-	  get_sleb128 (sf_offset, program);
+	  get_sleb128 (sf_offset, program, end);
 	  offset = sf_offset * cie->data_alignment_factor;
 	  goto def_cfa_offset;
 
 	case DW_CFA_def_cfa_expression:
 	  /* DW_FORM_block is a ULEB128 length followed by that many bytes.  */
-	  get_uleb128 (operand, program);
+	  get_uleb128 (operand, program, end);
 	  cfi_assert (operand <= (Dwarf_Word) (end - program));
 	  fs->cfa_rule = cfa_expr;
 	  fs->cfa_data.expr.data = (unsigned char *) program;
@@ -199,65 +216,71 @@ execute_cfi (Dwarf_CFI *cache,
 	  continue;
 
 	case DW_CFA_undefined:
-	  get_uleb128 (regno, program);
+	  get_uleb128 (regno, program, end);
 	  register_rule (regno, undefined, 0);
 	  continue;
 
 	case DW_CFA_same_value:
-	  get_uleb128 (regno, program);
+	  get_uleb128 (regno, program, end);
 	  register_rule (regno, same_value, 0);
 	  continue;
 
 	case DW_CFA_offset_extended:
-	  get_uleb128 (operand, program);
+	  get_uleb128 (operand, program, end);
+	  cfi_assert (program < end);
 	case DW_CFA_offset + 0 ... DW_CFA_offset + CFI_PRIMARY_MAX:
-	  get_uleb128 (offset, program);
+	  get_uleb128 (offset, program, end);
 	  offset *= cie->data_alignment_factor;
 	offset_extended:
 	  register_rule (operand, offset, offset);
 	  continue;
 
 	case DW_CFA_offset_extended_sf:
-	  get_uleb128 (operand, program);
-	  get_sleb128 (sf_offset, program);
+	  get_uleb128 (operand, program, end);
+	  get_sleb128 (sf_offset, program, end);
 	offset_extended_sf:
 	  offset = sf_offset * cie->data_alignment_factor;
 	  goto offset_extended;
 
 	case DW_CFA_GNU_negative_offset_extended:
 	  /* GNU extension obsoleted by DW_CFA_offset_extended_sf.  */
-	  get_uleb128 (operand, program);
-	  get_uleb128 (offset, program);
+	  get_uleb128 (operand, program, end);
+	  cfi_assert (program < end);
+	  get_uleb128 (offset, program, end);
 	  sf_offset = -offset;
 	  goto offset_extended_sf;
 
 	case DW_CFA_val_offset:
-	  get_uleb128 (operand, program);
-	  get_uleb128 (offset, program);
+	  get_uleb128 (operand, program, end);
+	  cfi_assert (program < end);
+	  get_uleb128 (offset, program, end);
 	  offset *= cie->data_alignment_factor;
 	val_offset:
 	  register_rule (operand, val_offset, offset);
 	  continue;
 
 	case DW_CFA_val_offset_sf:
-	  get_uleb128 (operand, program);
-	  get_sleb128 (sf_offset, program);
+	  get_uleb128 (operand, program, end);
+	  cfi_assert (program < end);
+	  get_sleb128 (sf_offset, program, end);
 	  offset = sf_offset * cie->data_alignment_factor;
 	  goto val_offset;
 
 	case DW_CFA_register:
-	  get_uleb128 (regno, program);
-	  get_uleb128 (operand, program);
+	  get_uleb128 (regno, program, end);
+	  cfi_assert (program < end);
+	  get_uleb128 (operand, program, end);
 	  register_rule (regno, register, operand);
 	  continue;
 
 	case DW_CFA_expression:
 	  /* Expression rule relies on section data, abi_cfi cannot use it.  */
 	  assert (! abi_cfi);
-	  get_uleb128 (regno, program);
+	  get_uleb128 (regno, program, end);
 	  offset = program - (const uint8_t *) cache->data->d.d_buf;
 	  /* DW_FORM_block is a ULEB128 length followed by that many bytes.  */
-	  get_uleb128 (operand, program);
+	  cfi_assert (program < end);
+	  get_uleb128 (operand, program, end);
 	  cfi_assert (operand <= (Dwarf_Word) (end - program));
 	  program += operand;
 	  register_rule (regno, expression, offset);
@@ -266,17 +289,17 @@ execute_cfi (Dwarf_CFI *cache,
 	case DW_CFA_val_expression:
 	  /* Expression rule relies on section data, abi_cfi cannot use it.  */
 	  assert (! abi_cfi);
-	  get_uleb128 (regno, program);
+	  get_uleb128 (regno, program, end);
 	  /* DW_FORM_block is a ULEB128 length followed by that many bytes.  */
 	  offset = program - (const uint8_t *) cache->data->d.d_buf;
-	  get_uleb128 (operand, program);
+	  get_uleb128 (operand, program, end);
 	  cfi_assert (operand <= (Dwarf_Word) (end - program));
 	  program += operand;
 	  register_rule (regno, val_expression, offset);
 	  continue;
 
 	case DW_CFA_restore_extended:
-	  get_uleb128 (operand, program);
+	  get_uleb128 (operand, program, end);
 	case DW_CFA_restore + 0 ... DW_CFA_restore + CFI_PRIMARY_MAX:
 
 	  if (unlikely (abi_cfi) && likely (opcode == DW_CFA_restore))
@@ -290,7 +313,7 @@ execute_cfi (Dwarf_CFI *cache,
 	  cfi_assert (cie->initial_state != NULL);
 
 	  /* Restore the CIE's initial rule for this register.  */
-	  if (unlikely (! enough_registers (operand)))
+	  if (unlikely (! enough_registers (operand, &fs, &result)))
 	    goto out;
 	  if (cie->initial_state->nregs > operand)
 	    fs->regs[operand] = cie->initial_state->regs[operand];
@@ -327,7 +350,7 @@ execute_cfi (Dwarf_CFI *cache,
 	case DW_CFA_GNU_window_save:
 	  /* This is magic shorthand used only by SPARC.  It's equivalent
 	     to a bunch of DW_CFA_register and DW_CFA_offset operations.  */
-	  if (unlikely (! enough_registers (31)))
+	  if (unlikely (! enough_registers (31, &fs, &result)))
 	    goto out;
 	  for (regno = 8; regno < 16; ++regno)
 	    {
@@ -347,7 +370,7 @@ execute_cfi (Dwarf_CFI *cache,
 
 	case DW_CFA_GNU_args_size:
 	  /* XXX is this useful for anything? */
-	  get_uleb128 (operand, program);
+	  get_uleb128 (operand, program, end);
 	  continue;
 
 	default:

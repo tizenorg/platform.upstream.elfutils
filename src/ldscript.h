@@ -1,19 +1,19 @@
-/* A Bison parser, made by GNU Bison 2.7.  */
+/* A Bison parser, made by GNU Bison 3.0.4.  */
 
 /* Bison interface for Yacc-like parsers in C
-   
-      Copyright (C) 1984, 1989-1990, 2000-2012 Free Software Foundation, Inc.
-   
+
+   Copyright (C) 1984, 1989-1990, 2000-2015 Free Software Foundation, Inc.
+
    This program is free software: you can redistribute it and/or modify
    it under the terms of the GNU General Public License as published by
    the Free Software Foundation, either version 3 of the License, or
    (at your option) any later version.
-   
+
    This program is distributed in the hope that it will be useful,
    but WITHOUT ANY WARRANTY; without even the implied warranty of
    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
    GNU General Public License for more details.
-   
+
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <http://www.gnu.org/licenses/>.  */
 
@@ -26,13 +26,13 @@
    special exception, which will cause the skeleton and the resulting
    Bison output files to be licensed under the GNU General Public
    License without this special exception.
-   
+
    This special exception was added by the Free Software Foundation in
    version 2.2 of Bison.  */
 
 #ifndef YY_LD_LDSCRIPT_H_INCLUDED
 # define YY_LD_LDSCRIPT_H_INCLUDED
-/* Enabling traces.  */
+/* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
 #endif
@@ -40,40 +40,39 @@
 extern int lddebug;
 #endif
 
-/* Tokens.  */
+/* Token type.  */
 #ifndef YYTOKENTYPE
 # define YYTOKENTYPE
-   /* Put the tokens into the symbol table, so that GDB and other debuggers
-      know about them.  */
-   enum yytokentype {
-     kADD_OP = 258,
-     kALIGN = 259,
-     kAS_NEEDED = 260,
-     kENTRY = 261,
-     kEXCLUDE_FILE = 262,
-     kFILENAME = 263,
-     kGLOBAL = 264,
-     kGROUP = 265,
-     kID = 266,
-     kINPUT = 267,
-     kINTERP = 268,
-     kKEEP = 269,
-     kLOCAL = 270,
-     kMODE = 271,
-     kMUL_OP = 272,
-     kNUM = 273,
-     kOUTPUT_FORMAT = 274,
-     kPAGESIZE = 275,
-     kPROVIDE = 276,
-     kSEARCH_DIR = 277,
-     kSEGMENT = 278,
-     kSIZEOF_HEADERS = 279,
-     kSORT = 280,
-     kVERSION = 281,
-     kVERSION_SCRIPT = 282,
-     ADD_OP = 283,
-     MUL_OP = 284
-   };
+  enum yytokentype
+  {
+    kADD_OP = 258,
+    kALIGN = 259,
+    kAS_NEEDED = 260,
+    kENTRY = 261,
+    kEXCLUDE_FILE = 262,
+    kFILENAME = 263,
+    kGLOBAL = 264,
+    kGROUP = 265,
+    kID = 266,
+    kINPUT = 267,
+    kINTERP = 268,
+    kKEEP = 269,
+    kLOCAL = 270,
+    kMODE = 271,
+    kMUL_OP = 272,
+    kNUM = 273,
+    kOUTPUT_FORMAT = 274,
+    kPAGESIZE = 275,
+    kPROVIDE = 276,
+    kSEARCH_DIR = 277,
+    kSEGMENT = 278,
+    kSIZEOF_HEADERS = 279,
+    kSORT = 280,
+    kVERSION = 281,
+    kVERSION_SCRIPT = 282,
+    ADD_OP = 283,
+    MUL_OP = 284
+  };
 #endif
 /* Tokens.  */
 #define kADD_OP 258
@@ -104,13 +103,12 @@ extern int lddebug;
 #define ADD_OP 283
 #define MUL_OP 284
 
-
-
+/* Value type.  */
 #if ! defined YYSTYPE && ! defined YYSTYPE_IS_DECLARED
-typedef union YYSTYPE
+
+union YYSTYPE
 {
-/* Line 2058 of yacc.c  */
-#line 63 "ldscript.y"
+#line 63 "/home/mark/src/elfutils/src/ldscript.y" /* yacc.c:1909  */
 
   uintmax_t num;
   enum expression_tag op;
@@ -125,29 +123,17 @@ typedef union YYSTYPE
   struct version *version;
   struct id_list *id_list;
 
+#line 127 "ldscript.h" /* yacc.c:1909  */
+};
 
-/* Line 2058 of yacc.c  */
-#line 131 "ldscript.h"
-} YYSTYPE;
+typedef union YYSTYPE YYSTYPE;
 # define YYSTYPE_IS_TRIVIAL 1
-# define yystype YYSTYPE /* obsolescent; will be withdrawn */
 # define YYSTYPE_IS_DECLARED 1
 #endif
 
+
 extern YYSTYPE ldlval;
 
-#ifdef YYPARSE_PARAM
-#if defined __STDC__ || defined __cplusplus
-int ldparse (void *YYPARSE_PARAM);
-#else
-int ldparse ();
-#endif
-#else /* ! YYPARSE_PARAM */
-#if defined __STDC__ || defined __cplusplus
 int ldparse (void);
-#else
-int ldparse ();
-#endif
-#endif /* ! YYPARSE_PARAM */
 
 #endif /* !YY_LD_LDSCRIPT_H_INCLUDED  */

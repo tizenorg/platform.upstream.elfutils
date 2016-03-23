@@ -1,5 +1,8 @@
 /* config.h.in.  Generated from configure.ac by autoheader.  */
 
+/* Building with -fsanitize=undefined or not */
+#undef CHECK_UNDEFINED
+
 /* Should ar and ranlib use -D behavior by default? */
 #undef DEFAULT_AR_DETERMINISTIC
 

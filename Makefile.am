@@ -1,7 +1,7 @@
 ## Process this file with automake to create Makefile.in
 ## Configure input file for elfutils.
 ##
-## Copyright (C) 1996-2002, 2003, 2004, 2005, 2006, 2008, 2009 Red Hat, Inc.
+## Copyright (C) 1996-2006, 2008, 2009, 2015 Red Hat, Inc.
 ##
 ## This file is part of elfutils.
 ##
@@ -20,6 +20,10 @@
 ##
 ACLOCAL_AMFLAGS = -I m4
 
+# automake already tells which subdir is being entered.
+# Don't make make repeat.
+AM_MAKEFLAGS = --no-print-directory
+
 pkginclude_HEADERS = version.h
 
 # Add doc back when we have some real content.
@@ -33,9 +37,9 @@ EXTRA_DIST = elfutils.spec GPG-KEY NOTES CONTRIBUTING \
 # Make sure the test build uses the same compiler, which on e.g. ppc64
 # determines which platform we are actually testing.
 # Run all tests under valgrind.
-DISTCHECK_CONFIGURE_FLAGS = \
+AM_DISTCHECK_CONFIGURE_FLAGS = \
 	--libdir=`echo $(libdir) | sed "s,^$(exec_prefix),$$dc_install_base,"`\
-	--enable-valgrind \
+	--enable-valgrind --enable-sanitize-undefined \
 	CC="$(CC)"
 
 distcheck-hook:

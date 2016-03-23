@@ -1,7 +1,7 @@
 # -*- rpm-spec-*-
 Summary: A collection of utilities and DSOs to handle compiled objects
 Name: elfutils
-Version: 0.160
+Version: 0.165
 Release: 1
 License: GPLv3+ and (GPLv2+ or LGPLv3+)
 Group: Development/Tools
@@ -10,6 +10,7 @@ Obsoletes: libelf libelf-devel
 Requires: elfutils-libelf = %{version}-%{release}
 Requires: glibc >= 2.7
 Requires: libstdc++
+Requires: default-yama-scope
 
 # ExcludeArch: xxx
 
@@ -30,13 +31,15 @@ BuildRequires: gcc-c++
 %define _programprefix eu-
 
 %description
-Elfutils is a collection of utilities, including ld (a linker),
-nm (for listing symbols from object files), size (for listing the
-section sizes of an object or archive file), strip (for discarding
-symbols), readelf (to see the raw ELF file structures), and elflint
-(to check for well-formed ELF files).  Also included are numerous
-helper libraries which implement DWARF, ELF, and machine-specific ELF
-handling.
+
+Elfutils is a collection of utilities, including stack (to show
+backtraces), nm (for listing symbols from object files), size
+(for listing the section sizes of an object or archive file),
+strip (for discarding symbols), readelf (to see the raw ELF file
+structures), elflint (to check for well-formed ELF files) and
+elfcompress (to compress or decompress ELF sections).
+Also included are helper libraries which implement DWARF, ELF,
+and machine-specific ELF handling and process introspection.
 
 %package devel
 Summary: Development libraries to handle compiled objects.
@@ -97,6 +100,22 @@ Conflicts: libelf-devel
 The elfutils-libelf-static package contains the static archive
 for libelf.
 
+%package default-yama-scope
+Summary: Default yama attach scope sysctl setting
+Group: Development/Tools
+License: GPLv2+ or LGPLv3+
+Provides: default-yama-scope
+BuildArch: noarch
+
+%description default-yama-scope
+Yama sysctl setting to enable default attach scope settings
+enabling programs to use ptrace attach, access to
+/proc/PID/{mem,personality,stack,syscall}, and the syscalls
+process_vm_readv and process_vm_writev which are used for
+interprocess services, communication and introspection
+(like synchronisation, signaling, debugging, tracing and
+profiling) of processes.
+
 %prep
 %setup -q
 
@@ -121,6 +140,8 @@ chmod +x ${RPM_BUILD_ROOT}%{_prefix}/%{_lib}/elfutils/lib*.so*
   rm -f .%{_libdir}/libasm.a
 }
 
+install -Dm0644 config/10-default-yama-scope.conf ${RPM_BUILD_ROOT}%{_sysctldir}/10-default-yama-scope.conf
+
 %check
 make check
 
@@ -134,6 +155,9 @@ rm -rf ${RPM_BUILD_ROOT}
 %post libelf -p /sbin/ldconfig
 
 %postun libelf -p /sbin/ldconfig
+
+%post default-yama-scope
+%sysctl_apply 10-default-yama-scope.conf
 
 %files
 %defattr(-,root,root)
@@ -153,6 +177,7 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_bindir}/eu-unstrip
 %{_bindir}/eu-make-debug-archive
 #%{_bindir}/eu-ld
+%{_bindir}/eu-elfcompress
 %{_libdir}/libasm-%{version}.so
 %{_libdir}/libdw-%{version}.so
 %{_libdir}/libasm.so.*
@@ -165,14 +190,17 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_includedir}/dwarf.h
 %dir %{_includedir}/elfutils
 %{_includedir}/elfutils/elf-knowledge.h
+%{_includedir}/elfutils/known-dwarf.h
 #%{_includedir}/elfutils/libasm.h
 %{_includedir}/elfutils/libebl.h
 %{_includedir}/elfutils/libdw.h
 %{_includedir}/elfutils/libdwfl.h
 %{_includedir}/elfutils/libdwelf.h
+%{_includedir}/elfutils/version.h
 %{_libdir}/libebl.a
 #%{_libdir}/libasm.so
 %{_libdir}/libdw.so
+%{_libdir}/pkgconfig/libdw.pc
 
 %files devel-static
 %{_libdir}/libdw.a
@@ -191,11 +219,67 @@ rm -rf ${RPM_BUILD_ROOT}
 %{_includedir}/nlist.h
 %{_includedir}/elfutils/version.h
 %{_libdir}/libelf.so
+%{_libdir}/pkgconfig/libelf.pc
 
 %files libelf-devel-static
 %{_libdir}/libelf.a
 
+%files default-yama-scope
+%config(noreplace) %{_sysctldir}/10-default-yama-scope.conf
+
 %changelog
+* Fri Jan  8 2016 Mark Wielaard <mjw@redhat.com> 0.165-1
+- elfcompress: New utility to compress or decompress ELF sections.
+- readelf: Add -z,--decompress option.
+- libelf: Add elf_compress, elf_compress_gnu, elf32_getchdr,
+  elf64_getchdr and gelf_getchdr.
+- libdwelf: New function dwelf_scn_gnu_compressed_size.
+- config: Add libelf and libdw pkg-config files.
+- backends: sparc support for core and live backtraces.
+- translations: Updated Polish translation.
+
+* Thu Oct 15 2015 Mark Wielaard <mjw@redhat.com> 0.164-1
+- strip, unstrip: Handle ELF files with merged strtab/shstrtab
+  tables. Handle missing SHF_INFO_LINK section flags.
+- libelf: Use int64_t for offsets in libelf.h instead of loff_t.
+- libdw: dwarf.h Add preliminary DWARF5 DW_LANG_Haskell.
+- libdwfl: dwfl_standard_find_debuginfo now searches any subdir of
+  the binary path under the debuginfo root when the separate
+  debug file couldn't be found by build-id.
+  dwfl_linux_proc_attach can now be called before any Dwfl_Modules
+  have been reported.
+- backends: Better sparc and sparc64 support.
+- translations: Updated Ukrainian translation.
+- Provide default-yama-scope subpackage.
+
+* Fri Jun 19 2015 Mark Wielaard <mjw@redhat.com> 0.163-1
+- Bug fixes only, no new features.
+
+* Wed Jun 10 2015 Mark Wielaard <mjw@redhat.com> 0.162-1
+- libdw: Install new header elfutils/known-dwarf.h.
+  dwarf.h Add preliminary DWARF5 constants DW_TAG_atomic_type,
+  DW_LANG_Fortran03, DW_LANG_Fortran08. dwarf_peel_type now also
+  handles DW_TAG_atomic_type.
+- addr2line: Input addresses are now always interpreted as
+  hexadecimal numbers, never as octal or decimal numbers.
+  New option -a, --addresses to print address before each entry.
+  New option -C, --demangle to show demangled symbols.
+  New option --pretty-print to print all information on one line.
+- ar: CVE-2014-9447 Directory traversal vulnerability in ar
+  extraction.
+- backends: x32 support.
+
+* Thu Dec 18 2014 Mark Wielaard <mjw@redhat.com> 0.161-1
+- libdw: New function dwarf_peel_type. dwarf_aggregate_size now uses
+  dwarf_peel_type to also provide the sizes of qualified types.
+  dwarf_getmacros will now serve either of .debug_macro and
+  .debug_macinfo transparently.  New interfaces dwarf_getmacros_off,
+  dwarf_macro_getsrcfiles, dwarf_macro_getparamcnt, and
+  dwarf_macro_param are available for more generalized inspection of
+  macros and their parameters.
+  dwarf.h: Add DW_AT_GNU_deleted, DW_AT_noreturn, DW_LANG_C11,
+  DW_LANG_C_plus_plus_11 and DW_LANG_C_plus_plus_14.
+
 * Mon Aug 25 2014 Mark Wielaard <mjw@redhat.com> 0.160-1
 - libdw: New functions dwarf_cu_getdwarf, dwarf_cu_die.
   dwarf.h remove non-existing DW_TAG_mutable_type.

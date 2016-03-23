@@ -62,12 +62,12 @@ endif
 
 libasm_so_SOURCES =
 libasm.so$(EXEEXT): libasm_pic.a libasm.map
-	$(LINK) -shared -o $@ -Wl,--whole-archive,$<,--no-whole-archive \
+	$(AM_V_CCLD)$(LINK) -shared -o $@ -Wl,--whole-archive,$<,--no-whole-archive \
 		-Wl,--version-script,$(srcdir)/libasm.map,--no-undefined \
 		-Wl,--soname,$@.$(VERSION) \
 		../libebl/libebl.a ../libelf/libelf.so  $(libasm_so_LDLIBS)
-	if $(READELF) -d $@ | fgrep -q TEXTREL; then exit 1; fi
-	ln -fs $@ $@.$(VERSION)
+	@$(textrel_check)
+	$(AM_V_at)ln -fs $@ $@.$(VERSION)
 
 install: install-am libasm.so
 	$(mkinstalldirs) $(DESTDIR)$(libdir)

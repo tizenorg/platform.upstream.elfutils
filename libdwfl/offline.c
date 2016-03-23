@@ -48,6 +48,7 @@ dwfl_offline_section_address (Dwfl_Module *mod,
   assert (mod->e_type == ET_REL);
   assert (shdr->sh_addr == 0);
   assert (shdr->sh_flags & SHF_ALLOC);
+  assert (shndx != 0);
 
   if (mod->debug.elf == NULL)
     /* We are only here because sh_addr is zero even though layout is complete.
@@ -297,7 +298,7 @@ dwfl_report_offline (Dwfl *dwfl, const char *name,
   if (fd < 0)
     {
       closefd = true;
-      fd = open64 (file_name, O_RDONLY);
+      fd = open (file_name, O_RDONLY);
       if (fd < 0)
 	{
 	  __libdwfl_seterrno (DWFL_E_ERRNO);

@@ -1,5 +1,5 @@
 /* Return section index of section header string table.
-   Copyright (C) 2002, 2005, 2009, 2014 Red Hat, Inc.
+   Copyright (C) 2002, 2005, 2009, 2014, 2015 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2002.
 
@@ -43,9 +43,7 @@
 
 
 int
-elf_getshdrstrndx (elf, dst)
-     Elf *elf;
-     size_t *dst;
+elf_getshdrstrndx (Elf *elf, size_t *dst)
 {
   int result = 0;
 
@@ -92,6 +90,13 @@ elf_getshdrstrndx (elf, dst)
 	  if (elf->class == ELFCLASS32)
 	    {
 	      size_t offset;
+	      if (unlikely (elf->state.elf32.scns.cnt == 0))
+		{
+		  /* Cannot use SHN_XINDEX without section headers.  */
+		  __libelf_seterrno (ELF_E_INVALID_SECTION_HEADER);
+		  result = -1;
+		  goto out;
+		}
 
 	      if (elf->state.elf32.scns.data[0].shdr.e32 != NULL)
 		{
@@ -146,6 +151,14 @@ elf_getshdrstrndx (elf, dst)
 	    }
 	  else
 	    {
+	      if (unlikely (elf->state.elf64.scns.cnt == 0))
+		{
+		  /* Cannot use SHN_XINDEX without section headers.  */
+		  __libelf_seterrno (ELF_E_INVALID_SECTION_HEADER);
+		  result = -1;
+		  goto out;
+		}
+
 	      if (elf->state.elf64.scns.data[0].shdr.e64 != NULL)
 		{
 		  num = elf->state.elf64.scns.data[0].shdr.e64->sh_link;

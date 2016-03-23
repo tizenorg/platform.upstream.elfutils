@@ -1,5 +1,5 @@
 /* Get register location expression for frame.
-   Copyright (C) 2009-2010 Red Hat, Inc.
+   Copyright (C) 2009-2010, 2014 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -34,12 +34,8 @@
 #include <dwarf.h>
 
 int
-dwarf_frame_register (fs, regno, ops_mem, ops, nops)
-     Dwarf_Frame *fs;
-     int regno;
-     Dwarf_Op ops_mem[3];
-     Dwarf_Op **ops;
-     size_t *nops;
+dwarf_frame_register (Dwarf_Frame *fs, int regno, Dwarf_Op *ops_mem,
+		      Dwarf_Op **ops, size_t *nops)
 {
   /* Maybe there was a previous error.  */
   if (fs == NULL)
@@ -102,7 +98,9 @@ dwarf_frame_register (fs, regno, ops_mem, ops, nops)
 
 	Dwarf_Block block;
 	const uint8_t *p = fs->cache->data->d.d_buf + reg->value;
-	get_uleb128 (block.length, p);
+	const uint8_t *end = (fs->cache->data->d.d_buf
+			      + fs->cache->data->d.d_size);
+	get_uleb128 (block.length, p, end);
 	block.data = (void *) p;
 
 	/* Parse the expression into internal form.  */

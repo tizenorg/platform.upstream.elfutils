@@ -1,5 +1,5 @@
 /* Reconstruct an ELF file by reading the segments out of remote memory.
-   Copyright (C) 2005-2011, 2014 Red Hat, Inc.
+   Copyright (C) 2005-2011, 2014, 2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -63,11 +63,15 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
 						size_t maxread),
 			void *arg)
 {
+  /* We might have to reserve some memory for the phdrs.  Set to NULL
+     here so we can always safely free it.  */
+  void *phdrsp = NULL;
+
   /* First read in the file header and check its sanity.  */
 
   const size_t initial_bufsize = 256;
   unsigned char *buffer = malloc (initial_bufsize);
-  if (buffer == NULL)
+  if (unlikely (buffer == NULL))
     {
     no_memory:
       __libdwfl_seterrno (DWFL_E_NOMEM);
@@ -80,6 +84,7 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
     {
     read_error:
       free (buffer);
+      free (phdrsp);
       __libdwfl_seterrno (nread < 0 ? DWFL_E_ERRNO : DWFL_E_TRUNCATED);
       return NULL;
     }
@@ -88,6 +93,7 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
     {
     bad_elf:
       free (buffer);
+      free (phdrsp);
       __libdwfl_seterrno (DWFL_E_BADELF);
       return NULL;
     }
@@ -172,6 +178,7 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
 	  if (newbuf == NULL)
 	    {
 	      free (buffer);
+	      free (phdrsp);
 	      goto no_memory;
 	    }
 	  buffer = newbuf;
@@ -184,14 +191,23 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
       xlatefrom.d_buf = buffer;
     }
 
-  union
-  {
-    Elf32_Phdr p32[phnum];
-    Elf64_Phdr p64[phnum];
-  } phdrs;
+  bool class32 = ehdr.e32.e_ident[EI_CLASS] == ELFCLASS32;
+  size_t phdr_size = class32 ? sizeof (Elf32_Phdr) : sizeof (Elf64_Phdr);
+  if (unlikely (phnum > SIZE_MAX / phdr_size))
+    {
+      free (buffer);
+      goto no_memory;
+    }
+  const size_t phdrsp_bytes = phnum * phdr_size;
+  phdrsp = malloc (phdrsp_bytes);
+  if (unlikely (phdrsp == NULL))
+    {
+      free (buffer);
+      goto no_memory;
+    }
 
-  xlateto.d_buf = &phdrs;
-  xlateto.d_size = sizeof phdrs;
+  xlateto.d_buf = phdrsp;
+  xlateto.d_size = phdrsp_bytes;
 
   /* Scan for PT_LOAD segments to find the total size of the file image.  */
   size_t contents_size = 0;
@@ -199,6 +215,8 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
   GElf_Off segments_end_mem = 0;
   GElf_Addr loadbase = ehdr_vma;
   bool found_base = false;
+  Elf32_Phdr (*p32)[phnum] = phdrsp;
+  Elf64_Phdr (*p64)[phnum] = phdrsp;
   switch (ehdr.e32.e_ident[EI_CLASS])
     {
       /* Sanity checks segments and calculates segment_end,
@@ -206,12 +224,10 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
 	 found_base yet).  Returns true if sanity checking failed,
 	 false otherwise.  */
       inline bool handle_segment (GElf_Addr vaddr, GElf_Off offset,
-				  GElf_Xword filesz, GElf_Xword memsz,
-				  GElf_Xword palign)
+				  GElf_Xword filesz, GElf_Xword memsz)
 	{
-	  /* Sanity check the alignment requirements.  */
-	  if ((palign & (pagesize - 1)) != 0
-	      || ((vaddr - offset) & (palign - 1)) != 0)
+	  /* Sanity check the segment load aligns with the pagesize.  */
+	  if (((vaddr - offset) & (pagesize - 1)) != 0)
 	    return true;
 
 	  GElf_Off segment_end = ((offset + filesz + pagesize - 1)
@@ -236,10 +252,9 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
 			  ehdr.e32.e_ident[EI_DATA]) == NULL)
 	goto libelf_error;
       for (uint_fast16_t i = 0; i < phnum; ++i)
-	if (phdrs.p32[i].p_type == PT_LOAD)
-	  if (handle_segment (phdrs.p32[i].p_vaddr, phdrs.p32[i].p_offset,
-			      phdrs.p32[i].p_filesz, phdrs.p32[i].p_memsz,
-			      phdrs.p32[i].p_align))
+	if ((*p32)[i].p_type == PT_LOAD)
+	  if (handle_segment ((*p32)[i].p_vaddr, (*p32)[i].p_offset,
+			      (*p32)[i].p_filesz, (*p32)[i].p_memsz))
 	    goto bad_elf;
       break;
 
@@ -248,10 +263,9 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
 			  ehdr.e64.e_ident[EI_DATA]) == NULL)
 	goto libelf_error;
       for (uint_fast16_t i = 0; i < phnum; ++i)
-	if (phdrs.p64[i].p_type == PT_LOAD)
-	  if (handle_segment (phdrs.p64[i].p_vaddr, phdrs.p64[i].p_offset,
-			      phdrs.p64[i].p_filesz, phdrs.p64[i].p_memsz,
-			      phdrs.p64[i].p_align))
+	if ((*p64)[i].p_type == PT_LOAD)
+	  if (handle_segment ((*p64)[i].p_vaddr, (*p64)[i].p_offset,
+			      (*p64)[i].p_filesz, (*p64)[i].p_memsz))
 	    goto bad_elf;
       break;
 
@@ -280,7 +294,10 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
   /* Now we know the size of the whole image we want read in.  */
   buffer = calloc (1, contents_size);
   if (buffer == NULL)
-    goto no_memory;
+    {
+      free (phdrsp);
+      goto no_memory;
+    }
 
   switch (ehdr.e32.e_ident[EI_CLASS])
     {
@@ -301,9 +318,9 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
 
     case ELFCLASS32:
       for (uint_fast16_t i = 0; i < phnum; ++i)
-	if (phdrs.p32[i].p_type == PT_LOAD)
-	  if (handle_segment (phdrs.p32[i].p_vaddr, phdrs.p32[i].p_offset,
-			      phdrs.p32[i].p_filesz))
+	if ((*p32)[i].p_type == PT_LOAD)
+	  if (handle_segment ((*p32)[i].p_vaddr, (*p32)[i].p_offset,
+			      (*p32)[i].p_filesz))
 	    goto read_error;
 
       /* If the segments visible in memory didn't include the section
@@ -328,9 +345,9 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
 
     case ELFCLASS64:
       for (uint_fast16_t i = 0; i < phnum; ++i)
-	if (phdrs.p64[i].p_type == PT_LOAD)
-	  if (handle_segment (phdrs.p64[i].p_vaddr, phdrs.p64[i].p_offset,
-			      phdrs.p64[i].p_filesz))
+	if ((*p64)[i].p_type == PT_LOAD)
+	  if (handle_segment ((*p64)[i].p_vaddr, (*p64)[i].p_offset,
+			      (*p64)[i].p_filesz))
 	    goto read_error;
 
       /* If the segments visible in memory didn't include the section
@@ -357,6 +374,9 @@ elf_from_remote_memory (GElf_Addr ehdr_vma,
       abort ();
       break;
     }
+
+  free (phdrsp);
+  phdrsp = NULL;
 
   /* Now we have the image.  Open libelf on it.  */
 

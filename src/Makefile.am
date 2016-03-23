@@ -35,7 +35,7 @@ native_ld = @native_ld@
 base_cpu = @base_cpu@
 
 bin_PROGRAMS = readelf nm size strip ld elflint findtextrel addr2line \
-	       elfcmp objdump ranlib strings ar unstrip stack
+	       elfcmp objdump ranlib strings ar unstrip stack elfcompress
 
 
 ld_dsos = libld_elf_i386_pic.a
@@ -72,8 +72,8 @@ CLEANFILES += make-debug-archive
 
 if BUILD_STATIC
 libasm = ../libasm/libasm.a
-libdw = ../libdw/libdw.a $(zip_LIBS) $(libelf) $(libebl) -ldl
-libelf = ../libelf/libelf.a
+libdw = ../libdw/libdw.a -lz $(zip_LIBS) $(libelf) $(libebl) -ldl
+libelf = ../libelf/libelf.a -lz
 else
 libasm = ../libasm/libasm.so
 libdw = ../libdw/libdw.so
@@ -88,28 +88,44 @@ endif
 
 # XXX While the file is not finished, don't warn about this
 ldgeneric_no_Wunused = yes
+ldgeneric_no_Wstack_usage = yes
+ldlex_no_Wstack_usage = yes
 
-readelf_LDADD = $(libdw) $(libebl) $(libelf) $(libeu) -ldl
-nm_LDADD = $(libdw) $(libebl) $(libelf) $(libeu) -ldl \
+# Bad, bad stack usage...
+readelf_no_Wstack_usage = yes
+nm_no_Wstack_usage = yes
+size_no_Wstack_usage = yes
+strip_no_Wstack_usage = yes
+elflint_no_Wstack_usage = yes
+findtextrel_no_Wstack_usage = yes
+elfcmp_no_Wstack_usage = yes
+objdump_no_Wstack_usage = yes
+ranlib_no_Wstack_usage = yes
+ar_no_Wstack_usage = yes
+unstrip_no_Wstack_usage = yes
+
+readelf_LDADD = $(libdw) $(libebl) $(libelf) $(libeu) $(argp_LDADD) -ldl
+nm_LDADD = $(libdw) $(libebl) $(libelf) $(libeu) $(argp_LDADD) -ldl \
 	   $(demanglelib)
-size_LDADD = $(libelf) $(libeu)
-strip_LDADD = $(libebl) $(libelf) $(libeu) -ldl
-ld_LDADD = $(libebl) $(libelf) $(libeu) -ldl
+size_LDADD = $(libelf) $(libeu) $(argp_LDADD)
+strip_LDADD = $(libebl) $(libelf) $(libeu) $(argp_LDADD) -ldl
+ld_LDADD = $(libebl) $(libelf) $(libeu) $(argp_LDADD) -ldl
 if NATIVE_LD
 # -ldl is always needed for libebl.
 ld_LDADD += libld_elf.a
 endif
 ld_LDFLAGS = -rdynamic
-elflint_LDADD  = $(libebl) $(libelf) $(libeu) -ldl
-findtextrel_LDADD = $(libdw) $(libelf)
-addr2line_LDADD = $(libdw) $(libelf)
-elfcmp_LDADD = $(libebl) $(libelf) -ldl
-objdump_LDADD  = $(libasm) $(libebl) $(libelf) $(libeu) -ldl
-ranlib_LDADD = libar.a $(libelf) $(libeu)
-strings_LDADD = $(libelf) $(libeu)
-ar_LDADD = libar.a $(libelf) $(libeu)
-unstrip_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) -ldl
-stack_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) -ldl $(demanglelib)
+elflint_LDADD  = $(libebl) $(libelf) $(libeu) $(argp_LDADD) -ldl
+findtextrel_LDADD = $(libdw) $(libelf) $(argp_LDADD)
+addr2line_LDADD = $(libdw) $(libelf) $(argp_LDADD) $(demanglelib)
+elfcmp_LDADD = $(libebl) $(libelf) $(argp_LDADD) -ldl
+objdump_LDADD  = $(libasm) $(libebl) $(libelf) $(libeu) $(argp_LDADD) -ldl
+ranlib_LDADD = libar.a $(libelf) $(libeu) $(argp_LDADD)
+strings_LDADD = $(libelf) $(libeu) $(argp_LDADD)
+ar_LDADD = libar.a $(libelf) $(libeu) $(argp_LDADD)
+unstrip_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD) -ldl
+stack_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD) -ldl $(demanglelib)
+elfcompress_LDADD = $(libebl) $(libelf) $(libdw) $(libeu) $(argp_LDADD)
 
 ldlex.o: ldscript.c
 ldlex_no_Werror = yes
@@ -124,16 +140,16 @@ am_libld_elf_i386_pic_a_OBJECTS = i386_ld.os
 
 libld_elf_i386_so_SOURCES =
 libld_elf_i386.so: libld_elf_i386_pic.a libld_elf_i386.map
-	$(LINK) -shared -o $@ -Wl,--whole-archive,$<,--no-whole-archive \
+	$(AM_V_CCLD)$(LINK) -shared -o $@ -Wl,--whole-archive,$<,--no-whole-archive \
 		$(libelf) $(libeu) \
 		-Wl,--version-script,$(srcdir)/libld_elf_i386.map
-	$(textrel_check)
+	@$(textrel_check)
 endif
 
 # Special rule to make it possible to define libld_elf_a_SOURCES as we do.
 # Otherwise make would complain.
 .deps/none_ld.Po: none_ld.os
-	-:
+	@-:
 
 
 installcheck-binPROGRAMS: $(bin_PROGRAMS)
@@ -158,11 +174,11 @@ MAINTAINERCLEANFILES = ldlex.c ldscript.c ldscript.h
 
 
 make-debug-archive: $(srcdir)/make-debug-archive.in
-	UNSTRIP=$(bindir)/`echo unstrip | sed '$(transform)'`; \
+	$(AM_V_GEN)UNSTRIP=$(bindir)/`echo unstrip | sed '$(transform)'`; \
 	AR=$(bindir)/`echo ar | sed '$(transform)'`; \
 	sed -e "s,[@]UNSTRIP[@],$$UNSTRIP,g" -e "s,[@]AR[@],$$AR,g" \
 	    -e "s%[@]PACKAGE_NAME[@]%$(PACKAGE_NAME)%g" \
 	    -e "s%[@]PACKAGE_VERSION[@]%$(PACKAGE_VERSION)%g" \
 	    $(srcdir)/make-debug-archive.in > $@.new
-	chmod +x $@.new
-	mv -f $@.new $@
+	$(AM_V_at)chmod +x $@.new
+	$(AM_V_at)mv -f $@.new $@

@@ -28,7 +28,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 37
+#define YY_FLEX_SUBMINOR_VERSION 39
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -198,6 +198,13 @@ extern FILE *ldin, *ldout;
                 int yyl;\
                 for ( yyl = n; yyl < ldleng; ++yyl )\
                     if ( ldtext[yyl] == '\n' )\
+                        --ldlineno;\
+            }while(0)
+    #define YY_LINENO_REWIND_TO(dst) \
+            do {\
+                const char *p;\
+                for ( p = yy_cp-1; p >= (dst); --p)\
+                    if ( *p == '\n' )\
                         --ldlineno;\
             }while(0)
     
@@ -1073,8 +1080,8 @@ int ld_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *ldtext;
-#line 1 "ldlex.l"
-#line 2 "ldlex.l"
+#line 1 "/home/mark/src/elfutils/src/ldlex.l"
+#line 2 "/home/mark/src/elfutils/src/ldlex.l"
 /* Copyright (C) 2001, 2002, 2003, 2004, 2005, 2008 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2001.
@@ -1146,7 +1153,7 @@ static int pop_state (void);
 static int handle_ifdef (void);
 static void invalid_char (int ch);
 
-#line 1150 "ldlex.c"
+#line 1157 "ldlex.c"
 
 #define INITIAL 0
 #define IGNORE 1
@@ -1332,16 +1339,6 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 88 "ldlex.l"
-
-				if (unlikely (ld_scan_version_script))
-				  {
-				    ld_scan_version_script = -1;
-				    return kVERSION_SCRIPT;
-				  }
-
-#line 1344 "ldlex.c"
-
 	if ( !(yy_init) )
 		{
 		(yy_init) = 1;
@@ -1368,6 +1365,17 @@ YY_DECL
 		ld_load_buffer_state( );
 		}
 
+	{
+#line 88 "/home/mark/src/elfutils/src/ldlex.l"
+
+				if (unlikely (ld_scan_version_script))
+				  {
+				    ld_scan_version_script = -1;
+				    return kVERSION_SCRIPT;
+				  }
+
+#line 1378 "ldlex.c"
+
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
 		yy_cp = (yy_c_buf_p);
@@ -1385,7 +1393,7 @@ YY_DECL
 yy_match:
 		do
 			{
-			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
+			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
 			if ( yy_accept[yy_current_state] )
 				{
 				(yy_last_accepting_state) = yy_current_state;
@@ -1433,19 +1441,21 @@ do_action:	/* This label is used only to access EOF actions. */
 case 1:
 /* rule 1 can match eol */
 *yy_cp = (yy_hold_char); /* undo effects of setting up ldtext */
+YY_LINENO_REWIND_TO(yy_bp + 6);
 (yy_c_buf_p) = yy_cp = yy_bp + 6;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 95 "ldlex.l"
+#line 95 "/home/mark/src/elfutils/src/ldlex.l"
 { BEGIN (handle_ifdef ()); }
 	YY_BREAK
 case 2:
 /* rule 2 can match eol */
 *yy_cp = (yy_hold_char); /* undo effects of setting up ldtext */
+YY_LINENO_REWIND_TO(yy_bp + 5);
 (yy_c_buf_p) = yy_cp = yy_bp + 5;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 96 "ldlex.l"
+#line 96 "/home/mark/src/elfutils/src/ldlex.l"
 { eat_to_eol (true);
 				  push_state (skip_to_endif);
 				  BEGIN (IGNORE); }
@@ -1453,10 +1463,11 @@ YY_RULE_SETUP
 case 3:
 /* rule 3 can match eol */
 *yy_cp = (yy_hold_char); /* undo effects of setting up ldtext */
+YY_LINENO_REWIND_TO(yy_bp + 8);
 (yy_c_buf_p) = yy_cp = yy_bp + 8;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 99 "ldlex.l"
+#line 99 "/home/mark/src/elfutils/src/ldlex.l"
 { eat_to_eol (false);
 				  push_state (skip_to_endif);
 				  BEGIN (IGNORE); }
@@ -1464,29 +1475,32 @@ YY_RULE_SETUP
 case 4:
 /* rule 4 can match eol */
 *yy_cp = (yy_hold_char); /* undo effects of setting up ldtext */
+YY_LINENO_REWIND_TO(yy_bp + 6);
 (yy_c_buf_p) = yy_cp = yy_bp + 6;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 102 "ldlex.l"
+#line 102 "/home/mark/src/elfutils/src/ldlex.l"
 { eat_to_eol (true) ; }
 	YY_BREAK
 case 5:
 /* rule 5 can match eol */
 *yy_cp = (yy_hold_char); /* undo effects of setting up ldtext */
+YY_LINENO_REWIND_TO(yy_bp + 6);
 (yy_c_buf_p) = yy_cp = yy_bp + 6;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 104 "ldlex.l"
+#line 104 "/home/mark/src/elfutils/src/ldlex.l"
 { eat_to_eol (false);
 				  push_state (skip_to_endif); }
 	YY_BREAK
 case 6:
 /* rule 6 can match eol */
 *yy_cp = (yy_hold_char); /* undo effects of setting up ldtext */
+YY_LINENO_REWIND_TO(yy_bp + 5);
 (yy_c_buf_p) = yy_cp = yy_bp + 5;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 106 "ldlex.l"
+#line 106 "/home/mark/src/elfutils/src/ldlex.l"
 { eat_to_eol (true);
 				  assert (prepdepth > 0);
 				  if (prepstate[prepdepth - 1] == skip_if)
@@ -1500,10 +1514,11 @@ YY_RULE_SETUP
 case 7:
 /* rule 7 can match eol */
 *yy_cp = (yy_hold_char); /* undo effects of setting up ldtext */
+YY_LINENO_REWIND_TO(yy_bp + 8);
 (yy_c_buf_p) = yy_cp = yy_bp + 8;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 115 "ldlex.l"
+#line 115 "/home/mark/src/elfutils/src/ldlex.l"
 { assert (prepdepth > 0);
 				  if (prepstate[prepdepth - 1] == skip_if)
 				    {
@@ -1516,118 +1531,119 @@ YY_RULE_SETUP
 case 8:
 /* rule 8 can match eol */
 *yy_cp = (yy_hold_char); /* undo effects of setting up ldtext */
+YY_LINENO_REWIND_TO(yy_bp + 6);
 (yy_c_buf_p) = yy_cp = yy_bp + 6;
 YY_DO_BEFORE_ACTION; /* set up ldtext again */
 YY_RULE_SETUP
-#line 123 "ldlex.l"
+#line 123 "/home/mark/src/elfutils/src/ldlex.l"
 { eat_to_eol (true);
 				  BEGIN (pop_state ()); }
 	YY_BREAK
 case 9:
 /* rule 9 can match eol */
 YY_RULE_SETUP
-#line 125 "ldlex.l"
+#line 125 "/home/mark/src/elfutils/src/ldlex.l"
 { /* nothing */ }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 128 "ldlex.l"
+#line 128 "/home/mark/src/elfutils/src/ldlex.l"
 { eat_comment (); }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 130 "ldlex.l"
+#line 130 "/home/mark/src/elfutils/src/ldlex.l"
 { return kALIGN; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 131 "ldlex.l"
+#line 131 "/home/mark/src/elfutils/src/ldlex.l"
 { return kAS_NEEDED; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 132 "ldlex.l"
+#line 132 "/home/mark/src/elfutils/src/ldlex.l"
 { return kENTRY; }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 133 "ldlex.l"
+#line 133 "/home/mark/src/elfutils/src/ldlex.l"
 { return kEXCLUDE_FILE; }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 134 "ldlex.l"
+#line 134 "/home/mark/src/elfutils/src/ldlex.l"
 { return kGLOBAL; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 135 "ldlex.l"
+#line 135 "/home/mark/src/elfutils/src/ldlex.l"
 { return kGROUP; }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 136 "ldlex.l"
+#line 136 "/home/mark/src/elfutils/src/ldlex.l"
 { return kINPUT; }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 137 "ldlex.l"
+#line 137 "/home/mark/src/elfutils/src/ldlex.l"
 { return kINTERP; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 138 "ldlex.l"
+#line 138 "/home/mark/src/elfutils/src/ldlex.l"
 { return kKEEP; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 139 "ldlex.l"
+#line 139 "/home/mark/src/elfutils/src/ldlex.l"
 { return kLOCAL; }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 140 "ldlex.l"
+#line 140 "/home/mark/src/elfutils/src/ldlex.l"
 { return kOUTPUT_FORMAT; }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 141 "ldlex.l"
+#line 141 "/home/mark/src/elfutils/src/ldlex.l"
 { return kPAGESIZE; }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 142 "ldlex.l"
+#line 142 "/home/mark/src/elfutils/src/ldlex.l"
 { return kPROVIDE; }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 143 "ldlex.l"
+#line 143 "/home/mark/src/elfutils/src/ldlex.l"
 { return kSEARCH_DIR; }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 144 "ldlex.l"
+#line 144 "/home/mark/src/elfutils/src/ldlex.l"
 { return kSEGMENT; }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 145 "ldlex.l"
+#line 145 "/home/mark/src/elfutils/src/ldlex.l"
 { return kSIZEOF_HEADERS; }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 146 "ldlex.l"
+#line 146 "/home/mark/src/elfutils/src/ldlex.l"
 { return kSORT; }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 147 "ldlex.l"
+#line 147 "/home/mark/src/elfutils/src/ldlex.l"
 { return kVERSION; }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 149 "ldlex.l"
-{ int cnt = 1 ;
+#line 149 "/home/mark/src/elfutils/src/ldlex.l"
+{ unsigned int cnt = 1 ;
 				  ldlval.num = 0;
 				  while (cnt < ldleng - 1)
 				    ldlval.num |= attrib_convert (ldtext[cnt++]);
@@ -1635,82 +1651,82 @@ YY_RULE_SETUP
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 155 "ldlex.l"
+#line 155 "/home/mark/src/elfutils/src/ldlex.l"
 { return '{'; }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 156 "ldlex.l"
+#line 156 "/home/mark/src/elfutils/src/ldlex.l"
 { return '}'; }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 157 "ldlex.l"
+#line 157 "/home/mark/src/elfutils/src/ldlex.l"
 { return '('; }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 158 "ldlex.l"
+#line 158 "/home/mark/src/elfutils/src/ldlex.l"
 { return ')'; }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 159 "ldlex.l"
+#line 159 "/home/mark/src/elfutils/src/ldlex.l"
 { return ':'; }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 160 "ldlex.l"
+#line 160 "/home/mark/src/elfutils/src/ldlex.l"
 { return ';'; }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 161 "ldlex.l"
+#line 161 "/home/mark/src/elfutils/src/ldlex.l"
 { return '='; }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 162 "ldlex.l"
+#line 162 "/home/mark/src/elfutils/src/ldlex.l"
 { ldlval.op = exp_plus; return kADD_OP; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 163 "ldlex.l"
+#line 163 "/home/mark/src/elfutils/src/ldlex.l"
 { ldlval.op = exp_minus; return kADD_OP; }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 164 "ldlex.l"
+#line 164 "/home/mark/src/elfutils/src/ldlex.l"
 { return '*'; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 165 "ldlex.l"
+#line 165 "/home/mark/src/elfutils/src/ldlex.l"
 { ldlval.op = exp_div; return kMUL_OP; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 166 "ldlex.l"
+#line 166 "/home/mark/src/elfutils/src/ldlex.l"
 { ldlval.op = exp_mod; return kMUL_OP; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 167 "ldlex.l"
+#line 167 "/home/mark/src/elfutils/src/ldlex.l"
 { return '&'; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 168 "ldlex.l"
+#line 168 "/home/mark/src/elfutils/src/ldlex.l"
 { return '|'; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 170 "ldlex.l"
+#line 170 "/home/mark/src/elfutils/src/ldlex.l"
 { return ','; }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 172 "ldlex.l"
+#line 172 "/home/mark/src/elfutils/src/ldlex.l"
 { char *endp;
 				  ldlval.num = strtoumax (ldtext, &endp, 0);
 				  if (*endp != '\0')
@@ -1727,14 +1743,14 @@ YY_RULE_SETUP
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 186 "ldlex.l"
+#line 186 "/home/mark/src/elfutils/src/ldlex.l"
 { ldlval.str = obstack_strndup (&ld_state.smem,
 								ldtext, ldleng);
 				  return kID; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 190 "ldlex.l"
+#line 190 "/home/mark/src/elfutils/src/ldlex.l"
 { ldlval.str = obstack_strndup (&ld_state.smem,
 								ldtext, ldleng);
 				  return kFILENAME; }
@@ -1742,20 +1758,20 @@ YY_RULE_SETUP
 case 48:
 /* rule 48 can match eol */
 YY_RULE_SETUP
-#line 194 "ldlex.l"
+#line 194 "/home/mark/src/elfutils/src/ldlex.l"
 { /* IGNORE */ }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 196 "ldlex.l"
+#line 196 "/home/mark/src/elfutils/src/ldlex.l"
 { invalid_char (*ldtext); }
 	YY_BREAK
 case 50:
 YY_RULE_SETUP
-#line 198 "ldlex.l"
+#line 198 "/home/mark/src/elfutils/src/ldlex.l"
 ECHO;
 	YY_BREAK
-#line 1759 "ldlex.c"
+#line 1775 "ldlex.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(IGNORE):
 	yyterminate();
@@ -1888,6 +1904,7 @@ case YY_STATE_EOF(IGNORE):
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
+	} /* end of user's declarations */
 } /* end of ldlex */
 
 /* yy_get_next_buffer - try to read in a new buffer
@@ -2765,7 +2782,7 @@ void ldfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 198 "ldlex.l"
+#line 198 "/home/mark/src/elfutils/src/ldlex.l"
 
 
 

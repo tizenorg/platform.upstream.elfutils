@@ -1,5 +1,5 @@
 /* Find an ELF file for a module from its build ID.
-   Copyright (C) 2007-2010, 2014 Red Hat, Inc.
+   Copyright (C) 2007-2010, 2014, 2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -37,9 +37,20 @@ internal_function
 __libdwfl_open_by_build_id (Dwfl_Module *mod, bool debug, char **file_name,
 			    const size_t id_len, const uint8_t *id)
 {
+  /* We don't handle very short or really large build-ids.  We need at
+     at least 3 and allow for up to 64 (normally ids are 20 long).  */
+#define MIN_BUILD_ID_BYTES 3
+#define MAX_BUILD_ID_BYTES 64
+  if (id_len < MIN_BUILD_ID_BYTES || id_len > MAX_BUILD_ID_BYTES)
+    {
+      __libdwfl_seterrno (DWFL_E_WRONG_ID_ELF);
+      return -1;
+    }
+
   /* Search debuginfo_path directories' .build-id/ subdirectories.  */
 
-  char id_name[sizeof "/.build-id/" + 1 + id_len * 2 + sizeof ".debug" - 1];
+  char id_name[sizeof "/.build-id/" + 1 + MAX_BUILD_ID_BYTES * 2
+	       + sizeof ".debug" - 1];
   strcpy (id_name, "/.build-id/");
   int n = snprintf (&id_name[sizeof "/.build-id/" - 1],
 		    4, "%02" PRIx8 "/", (uint8_t) id[0]);
@@ -55,12 +66,15 @@ __libdwfl_open_by_build_id (Dwfl_Module *mod, bool debug, char **file_name,
 	    ".debug");
 
   const Dwfl_Callbacks *const cb = mod->dwfl->callbacks;
-  char *path = strdupa ((cb->debuginfo_path ? *cb->debuginfo_path : NULL)
-			?: DEFAULT_DEBUGINFO_PATH);
+  char *path = strdup ((cb->debuginfo_path ? *cb->debuginfo_path : NULL)
+		       ?: DEFAULT_DEBUGINFO_PATH);
+  if (path == NULL)
+    return -1;
 
   int fd = -1;
   char *dir;
-  while (fd < 0 && (dir = strsep (&path, ":")) != NULL)
+  char *paths = path;
+  while (fd < 0 && (dir = strsep (&paths, ":")) != NULL)
     {
       if (dir[0] == '+' || dir[0] == '-')
 	++dir;
@@ -75,7 +89,7 @@ __libdwfl_open_by_build_id (Dwfl_Module *mod, bool debug, char **file_name,
 	break;
       memcpy (mempcpy (name, dir, dirlen), id_name, sizeof id_name);
 
-      fd = TEMP_FAILURE_RETRY (open64 (name, O_RDONLY));
+      fd = TEMP_FAILURE_RETRY (open (name, O_RDONLY));
       if (fd >= 0)
 	{
 	  if (*file_name != NULL)
@@ -89,6 +103,8 @@ __libdwfl_open_by_build_id (Dwfl_Module *mod, bool debug, char **file_name,
 	}
       free (name);
     }
+
+  free (path);
 
   /* If we simply found nothing, clear errno.  If we had some other error
      with the file, report that.  Possibly this should treat other errors
@@ -124,17 +140,19 @@ dwfl_build_id_find_elf (Dwfl_Module *mod,
 			char **file_name, Elf **elfp)
 {
   *elfp = NULL;
-  if (modname != NULL && mod->dwfl->executable_for_core != NULL
-      && (strcmp (modname, "[exe]") == 0 || strcmp (modname, "[pie]") == 0))
+  if (mod->is_executable
+      && mod->dwfl->user_core != NULL
+      && mod->dwfl->user_core->executable_for_core != NULL)
     {
       /* When dwfl_core_file_report was called with a non-NULL executable file
 	 name this callback will replace the Dwfl_Module main.name with the
-	 recorded executable file when the modname is [exe] or [pie] (which
-	 then triggers opening and reporting of the executable).  */
-      int fd = open64 (mod->dwfl->executable_for_core, O_RDONLY);
+	 recorded executable file when MOD was identified as main executable
+	 (which then triggers opening and reporting of the executable).  */
+      const char *executable = mod->dwfl->user_core->executable_for_core;
+      int fd = open (executable, O_RDONLY);
       if (fd >= 0)
 	{
-	  *file_name = strdup (mod->dwfl->executable_for_core);
+	  *file_name = strdup (executable);
 	  if (*file_name != NULL)
 	    return fd;
 	  else

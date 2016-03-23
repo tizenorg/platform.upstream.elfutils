@@ -1,5 +1,5 @@
 /* Update data structures for changes and write them out.
-   Copyright (C) 1999, 2000, 2001, 2002, 2004, 2005, 2006 Red Hat, Inc.
+   Copyright (C) 1999, 2000, 2001, 2002, 2004, 2005, 2006, 2015 Red Hat, Inc.
    This file is part of elfutils.
    Contributed by Ulrich Drepper <drepper@redhat.com>, 1999.
 
@@ -32,6 +32,7 @@
 #endif
 
 #include <libelf.h>
+#include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -77,6 +78,27 @@ write_file (Elf *elf, off_t size, int change_bo, size_t shnum)
 
   if (elf->map_address != NULL)
     {
+      /* When using mmap we want to make sure the file content is
+	 really there. Only using ftruncate might mean the file is
+	 extended, but space isn't allocated yet.  This might cause a
+	 SIGBUS once we write into the mmapped space and the disk is
+	 full.  In glibc posix_fallocate is required to extend the
+	 file and allocate enough space even if the underlying
+	 filesystem would normally return EOPNOTSUPP.  But other
+	 implementations might not work as expected.  And the glibc
+	 fallback case might fail (with unexpected errnos) in some cases.
+	 So we only report an error when the call fails and errno is
+	 ENOSPC. Otherwise we ignore the error and treat it as just hint.  */
+      if (elf->parent == NULL
+	  && (elf->maximum_size == ~((size_t) 0)
+	      || (size_t) size > elf->maximum_size)
+	  && unlikely (posix_fallocate (elf->fildes, 0, size) != 0))
+	if (errno == ENOSPC)
+	  {
+	    __libelf_seterrno (ELF_E_WRITE_ERROR);
+	    return -1;
+	  }
+
       /* The file is mmaped.  */
       if ((class == ELFCLASS32
 	   ? __elf32_updatemmap (elf, change_bo, shnum)
@@ -94,6 +116,7 @@ write_file (Elf *elf, off_t size, int change_bo, size_t shnum)
 	size = -1;
     }
 
+  /* Reduce the file size if necessary.  */
   if (size != -1
       && elf->parent == NULL
       && elf->maximum_size != ~((size_t) 0)
@@ -124,9 +147,7 @@ write_file (Elf *elf, off_t size, int change_bo, size_t shnum)
 
 
 off_t
-elf_update (elf, cmd)
-     Elf *elf;
-     Elf_Cmd cmd;
+elf_update (Elf *elf, Elf_Cmd cmd)
 {
   size_t shnum;
   off_t size;

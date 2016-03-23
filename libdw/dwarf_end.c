@@ -57,27 +57,8 @@ cu_free (void *arg)
 }
 
 
-#if USE_ZLIB
-void
-internal_function
-__libdw_free_zdata (Dwarf *dwarf)
-{
-  unsigned int gzip_mask = dwarf->sectiondata_gzip_mask;
-  while (gzip_mask != 0)
-    {
-      int i = ffs (gzip_mask);
-      assert (i > 0);
-      --i;
-      assert (i < IDX_last);
-      free (dwarf->sectiondata[i]);
-      gzip_mask &= ~(1U << i);
-    }
-}
-#endif
-
 int
-dwarf_end (dwarf)
-     Dwarf *dwarf;
+dwarf_end (Dwarf *dwarf)
 {
   if (dwarf != NULL)
     {
@@ -93,6 +74,12 @@ dwarf_end (dwarf)
       tdestroy (dwarf->cu_tree, cu_free);
       tdestroy (dwarf->tu_tree, cu_free);
 
+      /* Search tree for macro opcode tables.  */
+      tdestroy (dwarf->macro_ops, noop_free);
+
+      /* Search tree for decoded .debug_lines units.  */
+      tdestroy (dwarf->files_lines, noop_free);
+
       struct libdw_memblock *memp = dwarf->mem_tail;
       /* The first block is allocated together with the Dwarf object.  */
       while (memp->prev != NULL)
@@ -105,11 +92,16 @@ dwarf_end (dwarf)
       /* Free the pubnames helper structure.  */
       free (dwarf->pubnames_sets);
 
-      __libdw_free_zdata (dwarf);
-
       /* Free the ELF descriptor if necessary.  */
       if (dwarf->free_elf)
 	elf_end (dwarf->elf);
+
+      /* Free the fake location list CU.  */
+      if (dwarf->fake_loc_cu != NULL)
+	{
+	  cu_free (dwarf->fake_loc_cu);
+	  free (dwarf->fake_loc_cu);
+	}
 
       /* Free the context descriptor.  */
       free (dwarf);

@@ -29,7 +29,7 @@
 ##
 include $(top_srcdir)/config/eu.am
 if BUILD_STATIC
-AM_CFLAGS += -fpic
+AM_CFLAGS += -fPIC
 endif
 AM_CPPFLAGS += -I$(srcdir)/../libelf
 VERSION = 1
@@ -39,7 +39,7 @@ noinst_LIBRARIES = libdw_pic.a
 noinst_PROGRAMS = $(noinst_LIBRARIES:_pic.a=.so)
 
 include_HEADERS = dwarf.h
-pkginclude_HEADERS = libdw.h
+pkginclude_HEADERS = libdw.h known-dwarf.h
 
 libdw_a_SOURCES = dwarf_begin.c dwarf_begin_elf.c dwarf_end.c dwarf_getelf.c \
 		  dwarf_getpubnames.c dwarf_getabbrev.c dwarf_tag.c \
@@ -71,9 +71,11 @@ libdw_a_SOURCES = dwarf_begin.c dwarf_begin_elf.c dwarf_end.c dwarf_getelf.c \
 		  dwarf_getlocation.c dwarf_getstring.c dwarf_offabbrev.c \
 		  dwarf_getaranges.c dwarf_onearange.c dwarf_getarangeinfo.c \
 		  dwarf_getarange_addr.c dwarf_getattrs.c dwarf_formflag.c \
-		  dwarf_getmacros.c dwarf_macro_opcode.c dwarf_macro_param1.c \
-		  dwarf_macro_param2.c dwarf_addrdie.c \
-		  dwarf_getfuncs.c  \
+		  dwarf_getmacros.c dwarf_macro_getparamcnt.c	\
+		  dwarf_macro_opcode.c dwarf_macro_param.c	\
+		  dwarf_macro_param1.c dwarf_macro_param2.c	\
+		  dwarf_macro_getsrcfiles.c			\
+		  dwarf_addrdie.c dwarf_getfuncs.c \
 		  dwarf_decl_file.c dwarf_decl_line.c dwarf_decl_column.c \
 		  dwarf_func_inline.c dwarf_getsrc_file.c \
 		  libdw_findcu.c libdw_form.c libdw_alloc.c \
@@ -87,7 +89,7 @@ libdw_a_SOURCES = dwarf_begin.c dwarf_begin_elf.c dwarf_end.c dwarf_getelf.c \
 		  dwarf_aggregate_size.c dwarf_getlocation_implicit_pointer.c \
 		  dwarf_getlocation_die.c dwarf_getlocation_attr.c \
 		  dwarf_getalt.c dwarf_setalt.c dwarf_cu_getdwarf.c \
-		  dwarf_cu_die.c
+		  dwarf_cu_die.c dwarf_peel_type.c
 
 if MAINTAINER_MODE
 BUILT_SOURCES = $(srcdir)/known-dwarf.h
@@ -106,13 +108,13 @@ libdw.so$(EXEEXT): $(srcdir)/libdw.map libdw_pic.a ../libdwelf/libdwelf_pic.a \
 	  ../libelf/libelf.so
 # The rpath is necessary for libebl because its $ORIGIN use will
 # not fly in a setuid executable that links in libdw.
-	$(LINK) -shared -o $@ -Wl,--soname,$@.$(VERSION),-z,defs \
+	$(AM_V_CCLD)$(LINK) -shared -o $@ -Wl,--soname,$@.$(VERSION),-z,defs \
 		-Wl,--enable-new-dtags,-rpath,$(pkglibdir) \
 		-Wl,--version-script,$<,--no-undefined \
 		-Wl,--whole-archive $(filter-out $<,$^) -Wl,--no-whole-archive\
-		-ldl $(zip_LIBS)
-	if $(READELF) -d $@ | fgrep -q TEXTREL; then exit 1; fi
-	ln -fs $@ $@.$(VERSION)
+		-ldl -lz $(argp_LDADD) $(zip_LIBS)
+	@$(textrel_check)
+	$(AM_V_at)ln -fs $@ $@.$(VERSION)
 
 install: install-am libdw.so
 	$(mkinstalldirs) $(DESTDIR)$(libdir)
@@ -135,6 +137,6 @@ libdw_a_LIBADD += $(addprefix ../libdwelf/,$(libdwelf_objects))
 noinst_HEADERS = libdwP.h memory-access.h dwarf_abbrev_hash.h \
 		 dwarf_sig8_hash.h cfi.h encoded-value.h
 
-EXTRA_DIST = libdw.map known-dwarf.h
+EXTRA_DIST = libdw.map
 
 MOSTLYCLEANFILES = $(am_libdw_pic_a_OBJECTS) libdw.so.$(VERSION)

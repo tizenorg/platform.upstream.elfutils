@@ -27,7 +27,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 37
+#define YY_FLEX_SUBMINOR_VERSION 39
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -197,6 +197,13 @@ extern FILE *i386_in, *i386_out;
                 int yyl;\
                 for ( yyl = n; yyl < i386_leng; ++yyl )\
                     if ( i386_text[yyl] == '\n' )\
+                        --i386_lineno;\
+            }while(0)
+    #define YY_LINENO_REWIND_TO(dst) \
+            do {\
+                const char *p;\
+                for ( p = yy_cp-1; p >= (dst); --p)\
+                    if ( *p == '\n' )\
                         --i386_lineno;\
             }while(0)
     
@@ -537,8 +544,8 @@ int i386__flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *i386_text;
-#line 1 "i386_lex.l"
-#line 2 "i386_lex.l"
+#line 1 "/home/mark/src/elfutils/libcpu/i386_lex.l"
+#line 2 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 /* Copyright (C) 2004, 2005, 2007, 2008 Red Hat, Inc.
    Written by Ulrich Drepper <drepper@redhat.com>, 2004.
 
@@ -581,7 +588,7 @@ char *i386_text;
 static void eat_to_eol (void);
 static void invalid_char (int ch);
 
-#line 585 "i386_lex.c"
+#line 592 "i386_lex.c"
 
 #define INITIAL 0
 #define MAIN 1
@@ -767,11 +774,6 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 57 "i386_lex.l"
-
-
-#line 774 "i386_lex.c"
-
 	if ( !(yy_init) )
 		{
 		(yy_init) = 1;
@@ -798,6 +800,12 @@ YY_DECL
 		i386__load_buffer_state( );
 		}
 
+	{
+#line 57 "/home/mark/src/elfutils/libcpu/i386_lex.l"
+
+
+#line 808 "i386_lex.c"
+
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
 		yy_cp = (yy_c_buf_p);
@@ -815,7 +823,7 @@ YY_DECL
 yy_match:
 		do
 			{
-			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
+			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
 			if ( yy_accept[yy_current_state] )
 				{
 				(yy_last_accepting_state) = yy_current_state;
@@ -862,119 +870,119 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 59 "i386_lex.l"
+#line 59 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return kMASK; }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 61 "i386_lex.l"
+#line 61 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return kPREFIX; }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 62 "i386_lex.l"
+#line 62 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return kSUFFIX; }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 64 "i386_lex.l"
+#line 64 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return kSYNONYM; }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 66 "i386_lex.l"
+#line 66 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { i386_lval.num = strtoul (i386_text, NULL, 10);
 				  return kNUMBER; }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 69 "i386_lex.l"
+#line 69 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { BEGIN (MAIN); return kPERCPERC; }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 72 "i386_lex.l"
+#line 72 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return '0'; }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 73 "i386_lex.l"
+#line 73 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return '1'; }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 75 "i386_lex.l"
+#line 75 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { i386_lval.str = xstrndup (i386_text + 1,
 							    i386_leng - 2);
 				  return kBITFIELD; }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 79 "i386_lex.l"
+#line 79 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { i386_lval.str = (void *) -1l;
 				  return kID; }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 82 "i386_lex.l"
+#line 82 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { i386_lval.str = xstrndup (i386_text, i386_leng);
 				  return kID; }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 85 "i386_lex.l"
+#line 85 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return ','; }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 87 "i386_lex.l"
+#line 87 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return ':'; }
 	YY_BREAK
 case 14:
 /* rule 14 can match eol */
 YY_RULE_SETUP
-#line 89 "i386_lex.l"
+#line 89 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { /* IGNORE */ }
 	YY_BREAK
 case 15:
 /* rule 15 can match eol */
 YY_RULE_SETUP
-#line 91 "i386_lex.l"
+#line 91 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return '\n'; }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 93 "i386_lex.l"
+#line 93 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { eat_to_eol (); }
 	YY_BREAK
 case 17:
 /* rule 17 can match eol */
 YY_RULE_SETUP
-#line 95 "i386_lex.l"
+#line 95 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { /* IGNORE */ }
 	YY_BREAK
 case 18:
 /* rule 18 can match eol */
 YY_RULE_SETUP
-#line 97 "i386_lex.l"
+#line 97 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { return kSPACE; }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 99 "i386_lex.l"
+#line 99 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { i386_lval.ch = *i386_text; return kCHAR; }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 101 "i386_lex.l"
+#line 101 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 { invalid_char (*i386_text); }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 104 "i386_lex.l"
+#line 104 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 ECHO;
 	YY_BREAK
-#line 978 "i386_lex.c"
+#line 986 "i386_lex.c"
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(MAIN):
 	yyterminate();
@@ -1107,6 +1115,7 @@ case YY_STATE_EOF(MAIN):
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
+	} /* end of user's declarations */
 } /* end of i386_lex */
 
 /* yy_get_next_buffer - try to read in a new buffer
@@ -1984,7 +1993,7 @@ void i386_free (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 104 "i386_lex.l"
+#line 104 "/home/mark/src/elfutils/libcpu/i386_lex.l"
 
 
 

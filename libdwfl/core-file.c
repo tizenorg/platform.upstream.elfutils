@@ -1,5 +1,5 @@
 /* Core file handling.
-   Copyright (C) 2008-2010, 2013 Red Hat, Inc.
+   Copyright (C) 2008-2010, 2013, 2015 Red Hat, Inc.
    This file is part of elfutils.
 
    This file is free software; you can redistribute it and/or modify
@@ -39,33 +39,36 @@
 #include "system.h"
 
 
-/* This is a prototype of what a new libelf interface might be.
-   This implementation is pessimal for non-mmap cases and should
-   be replaced by more diddling inside libelf internals.  */
-static Elf *
-elf_begin_rand (Elf *parent, loff_t offset, loff_t size, loff_t *next)
+/* On failure return, we update *NEXT to point back at OFFSET.  */
+static inline Elf *
+do_fail (int error, off_t *next, off_t offset)
 {
-  if (parent == NULL)
-    return NULL;
-
-  /* On failure return, we update *NEXT to point back at OFFSET.  */
-  inline Elf *fail (int error)
-  {
     if (next != NULL)
       *next = offset;
     //__libelf_seterrno (error);
     __libdwfl_seterrno (DWFL_E (LIBELF, error));
     return NULL;
-  }
+}
 
-  loff_t min = (parent->kind == ELF_K_ELF ?
+#define fail(error) do_fail (error, next, offset)
+
+/* This is a prototype of what a new libelf interface might be.
+   This implementation is pessimal for non-mmap cases and should
+   be replaced by more diddling inside libelf internals.  */
+static Elf *
+elf_begin_rand (Elf *parent, off_t offset, off_t size, off_t *next)
+{
+  if (parent == NULL)
+    return NULL;
+
+  off_t min = (parent->kind == ELF_K_ELF ?
 		(parent->class == ELFCLASS32
 		 ? sizeof (Elf32_Ehdr) : sizeof (Elf64_Ehdr))
 		: parent->kind == ELF_K_AR ? SARMAG
 		: 0);
 
   if (unlikely (offset < min)
-      || unlikely (offset >= (loff_t) parent->maximum_size))
+      || unlikely (offset >= (off_t) parent->maximum_size))
     return fail (ELF_E_RANGE);
 
   /* For an archive, fetch just the size field
@@ -92,11 +95,11 @@ elf_begin_rand (Elf *parent, loff_t offset, loff_t size, loff_t *next)
       char *endp;
       size = strtoll (h.ar_size, &endp, 10);
       if (unlikely (endp == h.ar_size)
-	  || unlikely ((loff_t) parent->maximum_size - offset < size))
+	  || unlikely ((off_t) parent->maximum_size - offset < size))
 	return fail (ELF_E_INVALID_ARCHIVE);
     }
 
-  if (unlikely ((loff_t) parent->maximum_size - offset < size))
+  if (unlikely ((off_t) parent->maximum_size - offset < size))
     return fail (ELF_E_RANGE);
 
   /* Even if we fail at this point, update *NEXT to point past the file.  */
@@ -104,7 +107,7 @@ elf_begin_rand (Elf *parent, loff_t offset, loff_t size, loff_t *next)
     *next = offset + size;
 
   if (unlikely (offset == 0)
-      && unlikely (size == (loff_t) parent->maximum_size))
+      && unlikely (size == (off_t) parent->maximum_size))
     return elf_clone (parent, parent->cmd);
 
   /* Note the image is guaranteed live only as long as PARENT
@@ -114,7 +117,7 @@ elf_begin_rand (Elf *parent, loff_t offset, loff_t size, loff_t *next)
   Elf_Data *data = elf_getdata_rawchunk (parent, offset, size, ELF_T_BYTE);
   if (data == NULL)
     return NULL;
-  assert ((loff_t) data->d_size == size);
+  assert ((off_t) data->d_size == size);
   return elf_memory (data->d_buf, size);
 }
 
@@ -161,6 +164,9 @@ dwfl_report_core_segments (Dwfl *dwfl, Elf *elf, size_t phnum, GElf_Phdr *notes)
 /* Never read more than this much without mmap.  */
 #define MAX_EAGER_COST	8192
 
+/* Dwfl_Module_Callback passed to and called by dwfl_segment_report_module
+   to read in a segment as ELF image directly if possible or indicate an
+   attempt must be made to read in the while segment right now.  */
 static bool
 core_file_read_eagerly (Dwfl_Module *mod,
 			void **userdata __attribute__ ((unused)),
@@ -174,6 +180,10 @@ core_file_read_eagerly (Dwfl_Module *mod,
 {
   Elf *core = arg;
 
+  /* The available buffer is often the whole segment when the core file
+     was mmap'd if used together with the dwfl_elf_phdr_memory_callback.
+     Which means that if it is complete we can just construct the whole
+     ELF image right now without having to read in anything more.  */
   if (whole <= *buffer_available)
     {
       /* All there ever was, we already have on hand.  */
@@ -198,8 +208,9 @@ core_file_read_eagerly (Dwfl_Module *mod,
       return *elfp != NULL;
     }
 
-  /* We don't have the whole file.
-     Figure out if this is better than nothing.  */
+  /* We don't have the whole file.  Which either means the core file
+     wasn't mmap'd, but needs to still be read in, or that the segment
+     is truncated.  Figure out if this is better than nothing.  */
 
   if (worthwhile == 0)
     /* Caller doesn't think so.  */
@@ -212,11 +223,15 @@ core_file_read_eagerly (Dwfl_Module *mod,
     requires find_elf hook re-doing the magic to fall back if no file found
   */
 
-  if (mod->build_id_len > 0)
-    /* There is a build ID that could help us find the whole file,
-       which might be more useful than what we have.
-       We'll just rely on that.  */
+  if (whole > MAX_EAGER_COST && mod->build_id_len > 0)
+    /* We can't cheaply read the whole file here, so we'd
+       be using a partial file.  But there is a build ID that could
+       help us find the whole file, which might be more useful than
+       what we have.  We'll just rely on that.  */
     return false;
+
+  /* The file is either small (most likely the vdso) or big and incomplete,
+     but we don't have a build-id.  */
 
   if (core->map_address != NULL)
     /* It's cheap to get, so get it.  */
@@ -225,6 +240,44 @@ core_file_read_eagerly (Dwfl_Module *mod,
   /* Only use it if there isn't too much to be read.  */
   return cost <= MAX_EAGER_COST;
 }
+
+static inline void
+update_end (GElf_Phdr *pphdr, const GElf_Off align,
+            GElf_Off *pend, GElf_Addr *pend_vaddr)
+{
+  *pend = (pphdr->p_offset + pphdr->p_filesz + align - 1) & -align;
+  *pend_vaddr = (pphdr->p_vaddr + pphdr->p_memsz + align - 1) & -align;
+}
+
+/* Use following contiguous segments to get towards SIZE.  */
+static inline bool
+do_more (size_t size, GElf_Phdr *pphdr, const GElf_Off align,
+         Elf *elf, GElf_Off start, int *pndx,
+         GElf_Off *pend, GElf_Addr *pend_vaddr)
+{
+  while (*pend <= start || *pend - start < size)
+    {
+      if (pphdr->p_filesz < pphdr->p_memsz)
+	/* This segment is truncated, so no following one helps us.  */
+	return false;
+
+      if (unlikely (gelf_getphdr (elf, (*pndx)++, pphdr) == NULL))
+	return false;
+
+      if (pphdr->p_type == PT_LOAD)
+	{
+	  if (pphdr->p_offset > *pend
+	      || pphdr->p_vaddr > *pend_vaddr)
+	    /* It's discontiguous!  */
+	    return false;
+
+	  update_end (pphdr, align, pend, pend_vaddr);
+	}
+    }
+  return true;
+}
+
+#define more(size) do_more (size, &phdr, align, elf, start, &ndx, &end, &end_vaddr)
 
 bool
 dwfl_elf_phdr_memory_callback (Dwfl *dwfl, int ndx,
@@ -258,38 +311,7 @@ dwfl_elf_phdr_memory_callback (Dwfl *dwfl, int ndx,
   GElf_Off end;
   GElf_Addr end_vaddr;
 
-  inline void update_end ()
-  {
-    end = (phdr.p_offset + phdr.p_filesz + align - 1) & -align;
-    end_vaddr = (phdr.p_vaddr + phdr.p_memsz + align - 1) & -align;
-  }
-
-  update_end ();
-
-  /* Use following contiguous segments to get towards SIZE.  */
-  inline bool more (size_t size)
-  {
-    while (end <= start || end - start < size)
-      {
-	if (phdr.p_filesz < phdr.p_memsz)
-	  /* This segment is truncated, so no following one helps us.  */
-	  return false;
-
-	if (unlikely (gelf_getphdr (elf, ndx++, &phdr) == NULL))
-	  return false;
-
-	if (phdr.p_type == PT_LOAD)
-	  {
-	    if (phdr.p_offset > end
-		|| phdr.p_vaddr > end_vaddr)
-	      /* It's discontiguous!  */
-	      return false;
-
-	    update_end ();
-	  }
-      }
-    return true;
-  }
+  update_end (&phdr, align, &end, &end_vaddr);
 
   /* We need at least this much.  */
   if (! more (minread))
@@ -429,13 +451,27 @@ dwfl_core_file_report (Dwfl *dwfl, Elf *elf, const char *executable)
       return -1;
     }
 
-  free (dwfl->executable_for_core);
+  if (dwfl->user_core != NULL)
+    free (dwfl->user_core->executable_for_core);
   if (executable == NULL)
-    dwfl->executable_for_core = NULL;
+    {
+      if (dwfl->user_core != NULL)
+	dwfl->user_core->executable_for_core = NULL;
+    }
   else
     {
-      dwfl->executable_for_core = strdup (executable);
-      if (dwfl->executable_for_core == NULL)
+      if (dwfl->user_core == NULL)
+	{
+	  dwfl->user_core = calloc (1, sizeof (struct Dwfl_User_Core));
+	  if (dwfl->user_core == NULL)
+	    {
+	      __libdwfl_seterrno (DWFL_E_NOMEM);
+	      return -1;
+	    }
+	  dwfl->user_core->fd = -1;
+	}
+      dwfl->user_core->executable_for_core = strdup (executable);
+      if (dwfl->user_core->executable_for_core == NULL)
 	{
 	  __libdwfl_seterrno (DWFL_E_NOMEM);
 	  return -1;
@@ -451,7 +487,9 @@ dwfl_core_file_report (Dwfl *dwfl, Elf *elf, const char *executable)
   /* Next, we should follow the chain from DT_DEBUG.  */
 
   const void *auxv = NULL;
+  const void *note_file = NULL;
   size_t auxv_size = 0;
+  size_t note_file_size = 0;
   if (likely (notes_phdr.p_type == PT_NOTE))
     {
       /* PT_NOTE -> NT_AUXV -> AT_PHDR -> PT_DYNAMIC -> DT_DEBUG */
@@ -468,13 +506,19 @@ dwfl_core_file_report (Dwfl *dwfl, Elf *elf, const char *executable)
 	  size_t desc_pos;
 	  while ((pos = gelf_getnote (notes, pos, &nhdr,
 				      &name_pos, &desc_pos)) > 0)
-	    if (nhdr.n_type == NT_AUXV
-		&& nhdr.n_namesz == sizeof "CORE"
+	    if (nhdr.n_namesz == sizeof "CORE"
 		&& !memcmp (notes->d_buf + name_pos, "CORE", sizeof "CORE"))
 	      {
-		auxv = notes->d_buf + desc_pos;
-		auxv_size = nhdr.n_descsz;
-		break;
+		if (nhdr.n_type == NT_AUXV)
+		  {
+		    auxv = notes->d_buf + desc_pos;
+		    auxv_size = nhdr.n_descsz;
+		  }
+		if (nhdr.n_type == NT_FILE)
+		  {
+		    note_file = notes->d_buf + desc_pos;
+		    note_file_size = nhdr.n_descsz;
+		  }
 	      }
 	}
     }
@@ -498,6 +542,7 @@ dwfl_core_file_report (Dwfl *dwfl, Elf *elf, const char *executable)
       int seg = dwfl_segment_report_module (dwfl, ndx, NULL,
 					    &dwfl_elf_phdr_memory_callback, elf,
 					    core_file_read_eagerly, elf,
+					    note_file, note_file_size,
 					    &r_debug_info);
       if (unlikely (seg < 0))
 	{
@@ -567,7 +612,7 @@ dwfl_core_file_report (Dwfl *dwfl, Elf *elf, const char *executable)
 INTDEF (dwfl_core_file_report)
 NEW_VERSION (dwfl_core_file_report, ELFUTILS_0.158)
 
-#ifdef SHARED
+#ifdef SYMBOL_VERSIONING
 int _compat_without_executable_dwfl_core_file_report (Dwfl *dwfl, Elf *elf);
 COMPAT_VERSION_NEWPROTO (dwfl_core_file_report, ELFUTILS_0.146,
 			 without_executable)

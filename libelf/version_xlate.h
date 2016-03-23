@@ -1,5 +1,5 @@
 /* Conversion functions for versioning information.
-   Copyright (C) 1998, 1999, 2000, 2002, 2003 Red Hat, Inc.
+   Copyright (C) 1998, 1999, 2000, 2002, 2003, 2015 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 1998.
 
@@ -55,13 +55,18 @@ elf_cvt_Verdef (void *dest, const void *src, size_t len, int encode)
   if (len == 0)
     return;
 
+  /* Below we rely on the next field offsets to be correct, start by
+     copying over all data as is in case some data isn't translated.
+     We don't want to leave (undefined) garbage in the dest buffer.  */
+  memmove (dest, src, len);
+
   do
     {
       size_t aux_offset;
       GElf_Verdaux *asrc;
 
       /* Test for correct offset.  */
-      if (def_offset + sizeof (GElf_Verdef) > len)
+      if (def_offset > len || len - def_offset < sizeof (GElf_Verdef))
 	return;
 
       /* Work the tree from the first record.  */
@@ -90,7 +95,7 @@ elf_cvt_Verdef (void *dest, const void *src, size_t len, int encode)
 	  GElf_Verdaux *adest;
 
 	  /* Test for correct offset.  */
-	  if (aux_offset + sizeof (GElf_Verdaux) > len)
+	  if (aux_offset > len || len - aux_offset < sizeof (GElf_Verdaux))
 	    return;
 
 	  adest = (GElf_Verdaux *) ((char *) dest + aux_offset);
@@ -149,13 +154,18 @@ elf_cvt_Verneed (void *dest, const void *src, size_t len, int encode)
   if (len == 0)
     return;
 
+  /* Below we rely on the next field offsets to be correct, start by
+     copying over all data as is in case some data isn't translated.
+     We don't want to leave (undefined) garbage in the dest buffer.  */
+  memmove (dest, src, len);
+
   do
     {
       size_t aux_offset;
       GElf_Vernaux *asrc;
 
       /* Test for correct offset.  */
-      if (need_offset + sizeof (GElf_Verneed) > len)
+      if (need_offset > len || len - need_offset < sizeof (GElf_Verneed))
 	return;
 
       /* Work the tree from the first record.  */
@@ -182,7 +192,7 @@ elf_cvt_Verneed (void *dest, const void *src, size_t len, int encode)
 	  GElf_Vernaux *adest;
 
 	  /* Test for correct offset.  */
-	  if (aux_offset + sizeof (GElf_Vernaux) > len)
+	  if (aux_offset > len || len - aux_offset < sizeof (GElf_Vernaux))
 	    return;
 
 	  adest = (GElf_Vernaux *) ((char *) dest + aux_offset);

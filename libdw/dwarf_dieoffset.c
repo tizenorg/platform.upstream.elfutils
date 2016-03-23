@@ -1,5 +1,5 @@
 /* Return offset of DIE.
-   Copyright (C) 2003-2010 Red Hat, Inc.
+   Copyright (C) 2003-2010, 2014 Red Hat, Inc.
    This file is part of elfutils.
    Written by Ulrich Drepper <drepper@redhat.com>, 2003.
 
@@ -36,11 +36,10 @@
 
 
 Dwarf_Off
-dwarf_dieoffset (die)
-     Dwarf_Die *die;
+dwarf_dieoffset (Dwarf_Die *die)
 {
   return (die == NULL
 	  ? ~0ul
-	  : (Dwarf_Off) (die->addr - cu_data (die->cu)->d_buf));
+	  : (Dwarf_Off) (die->addr - die->cu->startp + die->cu->start));
 }
 INTDEF(dwarf_dieoffset)
