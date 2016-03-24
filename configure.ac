@@ -350,9 +350,6 @@ AC_CONFIG_FILES([libasm/Makefile])
 dnl CPU-specific backend libraries.
 AC_CONFIG_FILES([backends/Makefile])
 
-dnl Tools.
-AC_CONFIG_FILES([src/Makefile po/Makefile.in])
-
 dnl Test suite.
 AM_CONDITIONAL(STANDALONE, false)dnl Used in tests/Makefile.am, which see.
 AC_CONFIG_FILES([tests/Makefile])
