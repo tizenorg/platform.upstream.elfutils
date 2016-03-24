@@ -1,5 +1,5 @@
 %define keepstatic 1
-Name:           elfutils
+Name:           elfutils-gpl2
 Version:        0.165
 Release:        0
 License:        GPL-3.0+
@@ -8,7 +8,7 @@ Url:            http://elfutils.fedorahosted.org
 Group:          Base/Utilities
 Source:         elfutils-%{version}.tar.bz2
 Source2:        baselibs.conf
-Source1001: 	elfutils.manifest
+Source1001: 	elfutils-gpl2.manifest
 BuildRequires:  automake
 BuildRequires:  bison
 BuildRequires:  bzip2-devel
@@ -140,7 +140,6 @@ ls -lR %{buildroot}%{_libdir}/libelf*
 %files
 %manifest %{name}.manifest
 %defattr(-,root,root)
-%{_bindir}/*
 
 %files -n libasm
 %manifest %{name}.manifest
